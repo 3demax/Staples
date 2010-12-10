@@ -1,0 +1,1 @@
+Here are some notes that I want to keep, but not make available in the deployed version. This file should not appear in the deploy folder since it is listed in the IGNORE variable in settings.py.

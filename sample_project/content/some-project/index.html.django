@@ -1,0 +1,6 @@
+{% extends "_base.html.django" %}
+
+{% block title %}Project Qwerty{% endblock title %}
+{% block body %}
+Asdf
+{% endblock body %}
