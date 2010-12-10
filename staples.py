@@ -24,6 +24,8 @@ import os, shutil, commands, glob, sys
 PROJECT_ROOT = os.getcwd()
 CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
 DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
+DEPLOY_TRACKING_FILE = os.path.join(PROJECT_ROOT, 'staples_deploy_info.p')
+
 INDEX_FILE = 'index.html'
 IGNORE = ()
 PROCESSORS = {}
@@ -37,50 +39,53 @@ except ImportError:
 else:
     print 'Found settings.py'
 
+verbose=False
 
 # BUILD FUNCTIONS
 ###############################################################################
 def build():
-    print 'Starting build...\n', 'Removing any existing deploy directory'
+    print 'Starting build...\n'
+    if verbose:
+        print 'Removing any existing deploy directory'
     shutil.rmtree(DEPLOY_DIR, ignore_errors=True)
-
-    print 'Creating deploy directory: ', DEPLOY_DIR 
+    
+    if verbose:
+        print 'Creating deploy directory: ', DEPLOY_DIR 
     os.mkdir(DEPLOY_DIR)
 
-    print 'Traversing content directory: %s...' % CONTENT_DIR
-    scan_directories(CONTENT_DIR)
+    if verbose:
+        print 'Traversing content directory: %s...' % CONTENT_DIR
+
+    traverse_directories(CONTENT_DIR, file_handler=delegate_file, directory_handler=delegate_directory, target_path=CONTENT_DIR, parent_ignored=False)
     
     print '\nBuild done'
 
-def scan_directories(target_path, parent_ignored=False):
-    for current_file in glob.glob( os.path.join(target_path, '*') ):
-        delegate_file(target_path, current_file, parent_ignored=parent_ignored)
-
-def delegate_file(target_path, current_file, parent_ignored=False):
-    print "\nProcessing:", current_file
-    f = {}
-
-    f['name'], f['ext'] = os.path.splitext(current_file)
-
-    f['name'] = f['name'].replace(target_path, '')[1:]
-
-    f['file'] = current_file
-    f['deploy'] = DEPLOY_DIR + current_file.replace(CONTENT_DIR,'')
-    f['deploy_root'] = DEPLOY_DIR
-
+def delegate_directory(current_file, parent_ignored=False, target_path=None):
+    if verbose:
+        print "\nProcessing:", current_file
+    f = prep_file(current_file, target_path)
     if os.path.isdir(f['file']):
         if PROCESSORS.get('directory', None):
             PROCESSORS[f['ext']](f)
         else:
             handle_directory(f, parent_ignored=parent_ignored)
-    elif f['name'].startswith(".") or f['name'].startswith("_") or f['ext'].endswith("~") or (f['name'] + f['ext']) in IGNORE:
-        print 'Ignored:', f['file']
+
+def delegate_file(current_file, parent_ignored=False, target_path=None):
+    if verbose:
+        print "\nProcessing:", current_file
+    f = prep_file(current_file, target_path)
+
+    if is_ignorable(f):
+        if verbose:
+            print 'Ignored:', f['file']
     elif f['ext'] in PROCESSORS:
         PROCESSORS[f['ext']](f)
     elif not parent_ignored:
         handle_others(f)
     else:
-        print 'Doing nothing - parent ignored and no processor'
+        if verbose:
+            print 'Doing nothing - parent ignored and no processor'
+
 
 # DEFAULT HANDLERS
 # These two functions basically just copy anything they are given over to
@@ -93,18 +98,21 @@ def handle_directory(f, parent_ignored):
     contents are not copied.
     """
     if not f['name'][0] == '_' and not parent_ignored:
-        print 'Making directory: ', f['deploy']
+        if verbose:
+            print 'Making directory: ', f['deploy']
         os.mkdir(f['deploy'])
     else:
-        print 'Not duplicating directory'
+        if verbose:
+            print 'Not duplicating directory'
         parent_ignored = True
-    scan_directories(f['file'], parent_ignored=parent_ignored)
+    traverse_directories(f['file'], parent_ignored=parent_ignored)
 
 def handle_others(f):
     """
     Simply copies files from the source path to the deploy path.
     """
-    print 'Copying file to:', f['deploy']
+    if verbose:
+        print 'Copying file to:', f['deploy']
     commands.getoutput(u"cp %s %s" % (f['file'], f['deploy']))
 
 
@@ -126,10 +134,12 @@ def handle_django(f):
     os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
     deploy_path = f['deploy'].replace('.django','')
 
-    print 'Rendering:', f['file']
+    if verbose:
+        print 'Rendering:', f['file']
     rendered = render_to_string(f['file'], settings.CONTEXT if settings.CONTEXT else {})
 
-    print 'Saving rendered output to:', deploy_path
+    if verbose:
+        print 'Saving rendered output to:', deploy_path
     fout = open(deploy_path,'w')
     fout.write(rendered)
     fout.close()
@@ -204,98 +214,160 @@ class DirWatcher(object):
     Class that keeps track of the files in the content directory, and their
     modification times, so they can be watched for changes.
     """
-    def __init__(self, directory):
+    def __init__(self, directory, update=True):
         self.target_directory = directory
         self.changed_files = []
         self.file_list = {}
-        self.update_mtimes(self.target_directory)
+        if update:
+            self.update_mtimes(self.target_directory)
 
     def find_changed_files(self):
         self.changed_files = []
-        self.update_mtimes(self.target_directory)
+        traverse_directories(self.target_directory, file_handler=self.update_mtimes, target_path=self.target_directory)
         return self.changed_files
 
-    def update_mtimes(self, target_path):
+    def update_mtimes(self, current_file, target_path=None):
         """
         Recursively traverses the directory, updating the dictionary of mtimes
         and the list of files changed since the last check.
         """
-        for current_file in glob.glob( os.path.join(target_path, '*') ):
-            if os.path.isdir(current_file):
-                self.update_mtimes(current_file)
-            else:
-                try:
-                    mtime = os.path.getmtime(current_file)
-                except OSError:
-                    # removed
-                    mtime = None
-                    try:
-                        self.file_list.pop(current_file)
-                    except KeyError:
-                        pass
-                    self.changed_files.append((current_file, target_path, False))
-                else:
-                    # added or changed
-                    if not current_file in self.file_list or self.file_list[current_file] != mtime:
-                        self.file_list[current_file] = os.stat(current_file).st_mtime
-                        self.changed_files.append((current_file, target_path, True))
+        try:
+            mtime = os.path.getmtime(current_file)
+        except OSError:
+            # removed
+            mtime = None
+            try:
+                self.file_list.pop(current_file)
+            except KeyError:
+                pass
+            self.changed_files.append((current_file, target_path, False))
+        else:
+            # added or changed
+            if not current_file in self.file_list or self.file_list[current_file] != mtime:
+                self.file_list[current_file] = os.stat(current_file).st_mtime
+                self.changed_files.append((current_file, target_path, True))
 
 
 # DEPLOY FUNCTIONS
 ###############################################################################
 
-from ftplib import FTP
+from ftplib import FTP, error_perm
 ftp = FTP()
-def deploy():
+
+def deploy(full=False):
     """
     Initiates a full rebuild of the project, then deploys it using FTP to the
     specified server, using the specified username and password.
     """
     print 'Rebuilding...'
     build()
-    print '\nDeploying to ...'
+    print '\nDeploying to %s...' % FTP_URL
+
+    try:
+        import cPickle as pickle
+    except ImportError:
+        import pickle
+
+    try:
+        last_mtimes_file = open(DEPLOY_TRACKING_FILE)
+    except:
+        print 'no file'
+        last_mtimes = {}
+    else:
+        last_mtimes = pickle.load(last_mtimes_file)
+        last_mtimes_file.close()
+    
+
+    scanner = DirWatcher(CONTENT_DIR, update=False)
+    scanner.file_list = last_mtimes
+    changed_files = scanner.find_changed_files()
+    print changed_files
+    
     ftp.connect(FTP_URL)
     ftp.login(user=FTP_USER, passwd=FTP_PWD)
+    
+    for cf in changed_files:
+        f = prep_file(cf[0], CONTENT_DIR)
+        d = prep_file(cf[1], CONTENT_DIR)
+        make_remote_dir(d['deploy'])
+        if not is_ignorable(f):
+            upload_file(f['deploy'])
+        
+    last_mtimes_file = open(DEPLOY_TRACKING_FILE, 'w')
+    pickle.dump(scanner.file_list, last_mtimes_file)
+    last_mtimes_file.close()
 
-    traverse_directories(DEPLOY_DIR, file_handler=upload_file,
-                        directory_handler=make_remote_dir)
-
+    # 
+    # traverse_directories(DEPLOY_DIR, file_handler=upload_file,
+    #                     directory_handler=make_remote_dir)
 
 
 def upload_file(current_file):
     deploy_path = current_file.replace(DEPLOY_DIR, DEPLOY_ROOT)
-    print 'uploading', deploy_path
+    if verbose:
+        print 'uploading', deploy_path
+    try:
+        ftp.delete(deploy_path)
+    except:
+        pass
     ftp.storbinary('STOR ' + deploy_path, open(current_file))
 
 def make_remote_dir(current_file):
     deploy_path = current_file.replace(DEPLOY_DIR, DEPLOY_ROOT)
-    print 'making directory', deploy_path
-    ftp.mkd(deploy_path)
+    try:
+        if verbose:
+            print 'making directory', deploy_path
+        ftp.mkd(deploy_path)
+    except error_perm:
+        pass
 
 
 # HELPERS
 ###############################################################################
 
-def traverse_directories(target_path, file_handler=None,
-                        directory_handler=None):
+def traverse_directories(t_path, file_handler=None,
+                        directory_handler=None, **kwargs):
     """
     Recursively traverses a given directory, passing the current file or
-    directory to the given handler, if any.
+    directory to the given handler, if any. Also passes through additional
+    keyword arguments to the handlers.
     """
-    for current_file in glob.glob( os.path.join(target_path, '*') ):
+    for current_file in glob.glob( os.path.join(t_path, '*') ):
         if os.path.isdir(current_file):
             if directory_handler:
-                directory_handler(current_file)
-            traverse_directories(current_file, file_callback=file_callback,
-                                directory_callback=directory_callback)
+                directory_handler(current_file, **kwargs)
+            traverse_directories(current_file, file_handler=file_handler,
+                            directory_handler=directory_handler, **kwargs)
         else:
             if file_handler:
-                file_handler(current_file)
+                file_handler(current_file, **kwargs)
+
+def prep_file(current_file, target_path):
+    f = {}
+
+    f['name'], f['ext'] = os.path.splitext(current_file)
+
+    if target_path:
+        f['name'] = f['name'].replace(target_path, '')[1:]
+
+    f['file'] = current_file
+    f['deploy'] = DEPLOY_DIR + current_file.replace(CONTENT_DIR,'')
+    f['deploy_root'] = DEPLOY_DIR
+    return f
+
+def is_ignorable(f):
+    return f['name'].startswith(".") or f['name'].startswith("_") or f['ext'].endswith("~") or (f['name'] + f['ext']) in IGNORE
+
 
 # CONTROL
 ###############################################################################
 
 if __name__ == "__main__":
+    if 'verbose' in sys.argv:
+        verbose = True
+    else:
+        verbose = False
+
     if 'runserver' in sys.argv:
         port = 8000
         try:
@@ -303,16 +375,23 @@ if __name__ == "__main__":
         except:
             pass
         runserver(port)
+
     elif 'build' in sys.argv:
         build()
+
     elif 'watch' in sys.argv:
         watch()
+
     elif 'deploy' in sys.argv:
         deploy()
+
     else:
         print """
     Staples Usage:
         build     - `python staples.py build`
         watch     - `python staples.py watch`
         runserver - `python staples.py runserver [port]`'
+    
+    Add 'verbose' to any command for verbose output.
+    e.g. `python staples.py build verbose`
     """
