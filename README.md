@@ -1,13 +1,16 @@
 # Staples - Static Site Processing
 
-Staples is for static sites, particularly ones where each page has a specific layout. It gives direct control of the structure, while still allowing for the advantages of templating and other automated processing. Basically, Staples just passes everything through, but applies processing to specified files.
+Staples is for static sites, particularly ones where each page has a specific layout. It gives direct control of the structure, while still allowing for the advantages of templating and other automated processing. It follows the old-school model of the URLs being based on the directory structure, with `index.html` files and so on. Basically, Staples just passes everything through, but applies processing to specified files.
 
-Loosely based on: [aym-cms](https://github.com/lethain/aym-cms)
+Loosely based on [aym-cms](https://github.com/lethain/aym-cms), and inspired by [bottle](http://bottle.paws.de) and [Django](http://www.djangoproject.com)
 
 
 ## Installation
 
-The simplest usage is to just include `staples.py` in the project folder. However, Staples operates based on the current working directory, so the `staples.py` file itself can go anywhere, as long as you refer to it correctly when running it. It can even be added to your PATH and given executable permissions, turning it into a command. You can also use an alias to make the command simply `staples`.
+The simplest usage is to just include `staples.py` in the project folder. However, Staples operates based on the current working directory, so the `staples.py` file itself can go anywhere that you can run it. It can even be added to your PATH and given executable permissions, turning it into a command. You can also rename it or use an alias to make the command simply `staples`.
+
+Staples is inspired by Django, and uses the `settings.py` method of defining project-specific variables, such as content paths, template directories, deployment settings, etc. While not required, the `settings.py` file is helpful as it also is responsible for mapping the processors to the kinds of files (see Building and Watching). Any processors you have need to be in a spot accessible to Python and imported in settings. See `settings.py` in the sample project for an example of this.
+
 
 ## Usage
 
@@ -15,16 +18,17 @@ The simplest usage is to just include `staples.py` in the project folder. Howeve
 * `python staples.py build`: build the project
 * `python staples.py watch`: build, then watch the content directory for changes and process changed files
 
+
 ## Server
 
-The development server is very, very simple. It just handles requests for static files to `localhost:8000`. By default, the port is `8000`, though you can specify the port you want to use by adding it after runserver: `python staples.py runserver 8080` runs it at `localhost:8080`. Requests for directories will return back the `index.html` file in that directory.
+The development server is very, very simple. It just handles requests for static files to `localhost:8000`. By default, the port is `8000`, though you can specify the port you want to use by adding it after runserver: `python staples.py runserver 8080` runs it at `localhost:8080`. Requests for directories will return back the specified INDEX_FILE (default is `index.html`) in that directory.
 
 To use the server, you first have to build the project so that there is a deploy folder to serve from.
 
 
 ## Building and Watching
 
-Everything goes into `content/` and comes out in `deploy/`. Files and directories starting with `_` will not be copied (but will be processed). e.g. If your sass directory is `_sass`, the sass files will not be copied, but the sass processor can still compile them into CSS. It should be noted that `build` will delete the deploy directory and everything in it, then replace it with the processed content.
+Everything goes into `content/` and comes out in `deploy/`, or whatever you set the content and deploy directories to be. Files and directories starting with `_` will not be copied (but will be processed). e.g. If your sass directory is `_sass`, the sass files will not be copied, but the sass processor can still compile them into CSS. It should be noted that `build` will delete the deploy directory and everything in it, then replace it with the processed content.
 
 Files and folders will be processed according to the specified settings. The processors are mapped to extensions using a dictionary in `settings.py`.
 
@@ -101,6 +105,7 @@ The sample project included has some basic templates, styles, and other content 
 
 ## TODO
 * Pattern-based matching (wildcards, don't limit to extensions or keywords like 'directory')
-* Optional FTP or SSH upload for `python staples.py deploy` and `python staples.py redeploy`
+* Optional FTP or SSH upload for `python staples.py deploy` and `python staples.py redeploy` commands - needs to save a list of the mtimes.
 * Include processors for pystache, Closure Compiler, SASS compiler, etc
 * Combine watch and runserver so only one terminal is needed
+* DRY-up the file manipulation/traversal code

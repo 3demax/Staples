@@ -245,7 +245,7 @@ class DirWatcher(object):
 ###############################################################################
 
 from ftplib import FTP
-
+ftp = FTP()
 def deploy():
     """
     Initiates a full rebuild of the project, then deploys it using FTP to the
@@ -254,29 +254,43 @@ def deploy():
     print 'Rebuilding...'
     build()
     print '\nDeploying to ...'
-    ftp = FTP(FTP_URL, user=FTP_USER, passwd=FTP_PWD)
+    ftp.connect(FTP_URL)
+    ftp.login(user=FTP_USER, passwd=FTP_PWD)
 
-    traverse_directories(DEPLOY_DIR, file_callback=upload_file, ftp=ftp)
+    traverse_directories(DEPLOY_DIR, file_handler=upload_file,
+                        directory_handler=make_remote_dir)
 
-def traverse_directories(target_path, file_callback=None, ftp=None):
-    for current_file in glob.glob( os.path.join(target_path, '*') ):
-        if os.path.isdir(current_file):
-            make_remote_dir(current_file, ftp)
-            traverse_directories(current_file, file_callback=file_callback, ftp=ftp)
-        else:
-            if file_callback:
-                file_callback(current_file, ftp=ftp)
 
-def upload_file(current_file, ftp):
+
+def upload_file(current_file):
     deploy_path = current_file.replace(DEPLOY_DIR, DEPLOY_ROOT)
     print 'uploading', deploy_path
     ftp.storbinary('STOR ' + deploy_path, open(current_file))
 
-def make_remote_dir(current_file, ftp):
+def make_remote_dir(current_file):
     deploy_path = current_file.replace(DEPLOY_DIR, DEPLOY_ROOT)
     print 'making directory', deploy_path
     ftp.mkd(deploy_path)
 
+
+# HELPERS
+###############################################################################
+
+def traverse_directories(target_path, file_handler=None,
+                        directory_handler=None):
+    """
+    Recursively traverses a given directory, passing the current file or
+    directory to the given handler, if any.
+    """
+    for current_file in glob.glob( os.path.join(target_path, '*') ):
+        if os.path.isdir(current_file):
+            if directory_handler:
+                directory_handler(current_file)
+            traverse_directories(current_file, file_callback=file_callback,
+                                directory_callback=directory_callback)
+        else:
+            if file_handler:
+                file_handler(current_file)
 
 # CONTROL
 ###############################################################################
