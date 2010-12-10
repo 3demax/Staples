@@ -35,9 +35,11 @@ sys.path.append(PROJECT_ROOT)
 try:
     from settings import *
 except ImportError:
-    print 'No settings.py found, using defaults.\n'
+    if __name__ == "__main__":
+        print 'No settings.py found, using defaults.\n'
 else:
-    print 'Found settings.py'
+    if __name__ == "__main__":
+        print 'Found settings.py'
 
 verbose=False
 
@@ -75,7 +77,7 @@ def delegate_file(current_file, parent_ignored=False, target_path=None):
         print "\nProcessing:", current_file
     f = prep_file(current_file, target_path)
 
-    if is_ignorable(f):
+    if is_ignorable(f['name'] + f['ext']):
         if verbose:
             print 'Ignored:', f['file']
     elif f['ext'] in PROCESSORS:
@@ -274,9 +276,13 @@ def deploy(full=False):
         print 'no file'
         last_mtimes = {}
     else:
-        last_mtimes = pickle.load(last_mtimes_file)
-        last_mtimes_file.close()
-    
+        try:
+            last_mtimes = pickle.load(last_mtimes_file)
+            last_mtimes_file.close()
+        except:
+            last_mtimes = {}
+    if full:
+        last_mtimes = {}
 
     scanner = DirWatcher(CONTENT_DIR, update=False)
     scanner.file_list = last_mtimes
@@ -288,16 +294,16 @@ def deploy(full=False):
     
     for cf in changed_files:
         f = prep_file(cf[0], CONTENT_DIR)
-        d = prep_file(cf[1], CONTENT_DIR)
-        make_remote_dir(d['deploy'])
-        if not is_ignorable(f):
+        print f['deploy']
+        name = os.path.split(f['deploy'])
+        if not is_ignorable(name[1]):
+            make_remote_dir(name[0])
             upload_file(f['deploy'])
         
     last_mtimes_file = open(DEPLOY_TRACKING_FILE, 'w')
     pickle.dump(scanner.file_list, last_mtimes_file)
     last_mtimes_file.close()
 
-    # 
     # traverse_directories(DEPLOY_DIR, file_handler=upload_file,
     #                     directory_handler=make_remote_dir)
 
@@ -356,7 +362,7 @@ def prep_file(current_file, target_path):
     return f
 
 def is_ignorable(f):
-    return f['name'].startswith(".") or f['name'].startswith("_") or f['ext'].endswith("~") or (f['name'] + f['ext']) in IGNORE
+    return f.startswith(".") or f.startswith("_") or f.endswith("~") or f in IGNORE
 
 
 # CONTROL
@@ -384,6 +390,8 @@ if __name__ == "__main__":
 
     elif 'deploy' in sys.argv:
         deploy()
+    elif 'redeploy' in sys.argv:
+        deploy(full=True)
 
     else:
         print """
