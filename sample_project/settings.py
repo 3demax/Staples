@@ -34,6 +34,11 @@ CONTEXT = {
     }
 }
 
+# Set this to be the name of the file used for serving directories.
+# Standard practice is to use 'index.html', though if your production
+# server uses something else, you can customize this setting accordingly.
+INDEX_FILE = 'index.html'
+
 # Deploy information
 FTP_URL = 'ftp.example.com'
 DEPLOY_ROOT = '/example.com'

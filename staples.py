@@ -1,24 +1,47 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Staples is a simple static site generator based on the idea of processors
+mapped to types of files. It includes a basic server for development, and
+has no external requirements itself, beyond the Python Standard Library.
+Specific processors, such as the included Django template renderer, will
+have their own requirements.
+
+Info and source: http://github.com/typeish/Staples
+
+Alec Perkins, type(ish) inc
+License: UNLICENSE
+"""
+
+__author__ = 'Alec Perkins, type(ish) inc'
+__version__ = '0.1a'
+__license__ = 'UNLICENSE'
+
 import os, shutil, commands, glob, sys
 
-
 # Default settings
-CONTENT_DIR = 'content'
-DEPLOY_DIR = 'deploy'
+PROJECT_ROOT = os.getcwd()
+CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
+DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
+INDEX_FILE = 'index.html'
 IGNORE = ()
 PROCESSORS = {}
 
-# Look for a settings.py override
+# Look for a settings.py in the current working directory
+sys.path.append(PROJECT_ROOT)
 try:
     from settings import *
 except ImportError:
-    print 'No settings.py found\n'
+    print 'No settings.py found, using defaults.\n'
 else:
-    print 'Found settings.py\n'
+    print 'Found settings.py'
 
 
+# BUILD FUNCTIONS
+###############################################################################
 def build():
-    print 'Starting build...\n'
-    print 'Removing any existing deploy directory'
+    print 'Starting build...\n', 'Removing any existing deploy directory'
     shutil.rmtree(DEPLOY_DIR, ignore_errors=True)
 
     print 'Creating deploy directory: ', DEPLOY_DIR 
@@ -65,8 +88,9 @@ def delegate_file(target_path, current_file, parent_ignored=False):
 
 def handle_directory(f, parent_ignored):
     """
-    Directories not starting with an underscore (_) are created in the deploy path.
-    If a directory has an underscore, it is traversed, but it and its contents are not copied.
+    Directories not starting with an underscore (_) are created in the deploy
+    path. If a directory has an underscore, it is traversed, but it and its
+    contents are not copied.
     """
     if not f['name'][0] == '_' and not parent_ignored:
         print 'Making directory: ', f['deploy']
@@ -113,18 +137,21 @@ def handle_django(f):
 
 
 # DEVELOPMENT SERVER
+###############################################################################
 
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import mimetypes
+
 class HandleRequests(BaseHTTPRequestHandler):
+    """
+    A stupid-simple webserver that serves up static files, and nothing else.
+    Requests for a directory will return the contents of the INDEX_FILE.
+    """
     def do_GET(self):
-        if self.path[-1] == '/':
-            self.path = self.path + 'index.html'
         try:
             path_append = ''
-            if self.path.endswith('/'):
-                path_append = 'index.html'
-            
+            if len(self.path) > 0 and self.path[-1] == '/':
+                self.path = self.path + INDEX_FILE
             file_path = DEPLOY_DIR + self.path + path_append
             mtype = mimetypes.guess_type(file_path)[0]
             f = open(file_path)
@@ -138,8 +165,10 @@ class HandleRequests(BaseHTTPRequestHandler):
         except IOError:
             self.send_error(404,'File Not Found: %s' % self.path)
 
-
 def runserver(port=8000):
+    """
+    Runs the web server at localhost and the specified port (default port 8000).
+    """
     try:
         server = HTTPServer(('', port), HandleRequests)
         print 'Running server at localhost:%s...' % port
@@ -148,8 +177,17 @@ def runserver(port=8000):
         print 'Shutting down server'
         server.socket.close()
 
-import time
+
+# WATCH FUNCTIONS
+###############################################################################
+
+import datetime, time
+
 def watch():
+    """
+    Initiates a full rebuild of the project, then watches for changed files.
+    Once a second, it polls all of the files in the content directory.
+    """
     watcher = DirWatcher(CONTENT_DIR)
     build()
     print 'Watching %s...' % CONTENT_DIR
@@ -160,14 +198,12 @@ def watch():
             for f in changed:
                 if f[2]:
                     delegate_file(f[1], f[0])
-        
-
-
-
-import datetime
-
 
 class DirWatcher(object):
+    """
+    Class that keeps track of the files in the content directory, and their
+    modification times, so they can be watched for changes.
+    """
     def __init__(self, directory):
         self.target_directory = directory
         self.changed_files = []
@@ -180,6 +216,10 @@ class DirWatcher(object):
         return self.changed_files
 
     def update_mtimes(self, target_path):
+        """
+        Recursively traverses the directory, updating the dictionary of mtimes
+        and the list of files changed since the last check.
+        """
         for current_file in glob.glob( os.path.join(target_path, '*') ):
             if os.path.isdir(current_file):
                 self.update_mtimes(current_file)
@@ -200,9 +240,17 @@ class DirWatcher(object):
                         self.file_list[current_file] = os.stat(current_file).st_mtime
                         self.changed_files.append((current_file, target_path, True))
 
+
+# DEPLOY FUNCTIONS
+###############################################################################
+
 from ftplib import FTP
 
 def deploy():
+    """
+    Initiates a full rebuild of the project, then deploys it using FTP to the
+    specified server, using the specified username and password.
+    """
     print 'Rebuilding...'
     build()
     print '\nDeploying to ...'
@@ -229,7 +277,9 @@ def make_remote_dir(current_file, ftp):
     print 'making directory', deploy_path
     ftp.mkd(deploy_path)
 
+
 # CONTROL
+###############################################################################
 
 if __name__ == "__main__":
     if 'runserver' in sys.argv:
@@ -247,8 +297,8 @@ if __name__ == "__main__":
         deploy()
     else:
         print """
-            Staples Usage:
-                build - `python staples.py build`
-                watch - `python staples.py watch`
-                runserver - `python staples.py runserver [port]`'
-            """
+    Staples Usage:
+        build     - `python staples.py build`
+        watch     - `python staples.py watch`
+        runserver - `python staples.py runserver [port]`'
+    """

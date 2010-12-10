@@ -4,7 +4,12 @@ Staples is for static sites, particularly ones where each page has a specific la
 
 Loosely based on: [aym-cms](https://github.com/lethain/aym-cms)
 
-Commands:
+
+## Installation
+
+The simplest usage is to just include `staples.py` in the project folder. However, Staples operates based on the current working directory, so the `staples.py` file itself can go anywhere, as long as you refer to it correctly when running it. It can even be added to your PATH and given executable permissions, turning it into a command. You can also use an alias to make the command simply `staples`.
+
+## Usage
 
 * `python staples.py runserver [port]`: run the dev server, with optional port
 * `python staples.py build`: build the project
@@ -30,7 +35,7 @@ Files and folders will be processed according to the specified settings. The pro
 Any files that aren't handled by a specific processor get handled by the default processor.
 
 `watch` takes `build` a step further. It does an initial build, then watches the content directory for changes. Any changed files are processed.
-Note: `watch` does not remove files or folders from the deploy directory that have been removed from the content directory, so a full rebuild is necessary if you want to remove files. (Or, you can manually delete the files from the deploy directory.) Also, changes structure-type templates that are included or extended may not change the files that use them, depending on the behavior of the processor.
+Note: `watch` does not remove files or folders from the deploy directory that have been removed from the content directory, so a full rebuild is necessary if you want to remove files. (Or, you can manually delete the files from the deploy directory.) Also, changes to extended or included templates may not change the files that use them, depending on the behavior of the processor.
 
 
 ## Processors
@@ -91,8 +96,7 @@ The deploy path given does not have to be where the processed output goes. The p
 
 ## Sample Project
 
-Uses Django templates.
-Includes the deployed version, for comparison.
+The sample project included has some basic templates, styles, and other content in both its "source" form and its deployed form. It uses Django templates, so to try building or watching with it you will need Django. (You can also just remove the '.django' handler from `settings.py`.) You can also try the development server with it. The settings file includes sample FTP settings, though obviously the `deploy` command won't work with them.
 
 
 ## TODO
