@@ -1,10 +1,10 @@
 import os
 
-ROOT_PATH = os.path.dirname(__file__)
+PROJECT_ROOT = os.getcwd()
 
 # Django needs absolute paths for template rendering
-CONTENT_DIR = os.path.join(ROOT_PATH,'content')
-DEPLOY_DIR = os.path.join(ROOT_PATH,'deploy')
+CONTENT_DIR = os.path.join(PROJECT_ROOT,'content')
+DEPLOY_DIR = os.path.join(PROJECT_ROOT,'deploy')
 
 # Add specific filenames to ignore here.
 IGNORE = (
@@ -24,7 +24,7 @@ PROCESSORS = {
 
 # Django template rendering stuff
 TEMPLATE_DIRS = (
-    os.path.join(ROOT_PATH,'content'),
+    os.path.join(PROJECT_ROOT,'content'),
 )
 
 CONTEXT = {

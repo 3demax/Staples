@@ -50,9 +50,10 @@ class File(object):
     
     def __init__(self, file_path, parent_ignored=False):
         self.source = file_path
-        self.rel_path = file_path.replace(CONTENT_DIR,'')
+        self.rel_path = file_path.replace(CONTENT_DIR,'').lstrip('/')
         self.rel_parent, self.name = os.path.split(self.source)
-        self.ext = os.path.splitext(self.name)
+        self.ext = os.path.splitext(self.name)[1]
+        self.parent_ignored = parent_ignored
     
     def process(self, **kwargs):
         if verbose:
@@ -82,7 +83,7 @@ class File(object):
     def mtime(self): return os.path.getmtime(self.source)
     
     @property
-    def is_directory(self): return os.path.isdir(file_path)
+    def is_directory(self): return os.path.isdir(self.source)
 
     @property
     def ignorable(self):
@@ -113,38 +114,8 @@ def build_directories(t_path, **kwargs):
     Recursively traverses a given directory, calling the given file's handler.
     Keyword arguments are passed through to the handler.
     """
-    for f in glob.glob( os.path.join(t_path, '*') ):
-        fobj = File(f)
-        if fobj.is_directory:
-            build_directories(f.source, **kwargs)
-        fobj.process(**kwargs)
-
-def delegate_directory(current_file, parent_ignored=False, target_path=None, **kwargs):
-    if verbose:
-        print "\nProcessing:", current_file
-    f = prep_file(current_file, target_path)
-    if current_file.is_directory():
-        if PROCESSORS.get('directory', None):
-            PROCESSORS[f['ext']](f, **kwargs)
-        else:
-            handle_directory(f, **kwargs)
-
-def delegate_file(current_file, parent_ignored=False, target_path=None, **kwargs):
-    if verbose:
-        print "\nProcessing:", current_file
-    f = prep_file(current_file, target_path)
-
-    if is_ignorable(f['name'] + f['ext']):
-        if verbose:
-            print 'Ignored:', f['file']
-    elif f['ext'] in PROCESSORS:
-        PROCESSORS[f['ext']](f, **kwargs)
-    elif not parent_ignored:
-        handle_others(f, **kwargs)
-    else:
-        if verbose:
-            print 'Doing nothing - parent ignored and no processor'
-
+    for file in glob.glob( os.path.join(t_path, '*') ):
+        File(file, **kwargs).process(**kwargs)
 
 # DEFAULT HANDLERS
 # These two functions basically just copy anything they are given over to
@@ -156,28 +127,31 @@ def handle_directory(f, parent_ignored=False, **kwargs):
     path. If a directory has an underscore, it is traversed, but it and its
     contents are not copied.
     """
-    if not f['name'][0] == '_' and not parent_ignored:
+    if not f.ignorable and not f.parent_ignored:
         if verbose:
-            print 'Making directory: ', f['deploy']
-        os.mkdir(f['deploy'])
+            print 'Making directory: ', f.deploy_path
+        os.mkdir(f.deploy_path)
     else:
         if verbose:
             print 'Not duplicating directory'
         parent_ignored = True
-    traverse_directories(f['file'], parent_ignored=parent_ignored)
+    build_directories(f.source, parent_ignored=parent_ignored, **kwargs)
 
 def handle_others(f, **kwargs):
     """
     Simply copies files from the source path to the deploy path.
     """
-    if verbose:
-        print 'Copying file to:', f['deploy']
-    commands.getoutput(u"cp %s %s" % (f['file'], f['deploy']))
+    if not f.ignorable and not f.parent_ignored:
+        if verbose:
+            print 'Copying file to:', f.deploy_path
+        commands.getoutput(u"cp %s %s" % (f.source, f.deploy_path))
+    elif verbose:
+        print 'Ignoring:', f.rel_path
 
 
 # EXTRA HANDLERS
 
-def handle_django(f, for_deployment=False):
+def handle_django(f, for_deployment=False, **kwargs):
     """
     Renders templates using the Django template rendering engine. If the
     template ends in .django, the resulting output filename has that removed.
@@ -187,69 +161,30 @@ def handle_django(f, for_deployment=False):
         settings.py - placed in the same directory and defines both
                       TEMPLATE_DIRS and CONTEXT
     """
+    if not f.ignorable and not f.parent_ignored:
+        from django.template.loader import render_to_string
+        import settings
+        os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
+        deploy_path = f.deploy_path.replace('.django','')
+
+        if verbose:
+            print 'Rendering:', f.rel_path
     
-    from django.template.loader import render_to_string
-    import settings
-    os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
-    deploy_path = f['deploy'].replace('.django','')
+        context = {}
+        if settings.CONTEXT:
+            context = settings.CONTEXT
+        context['for_deployment'] = for_deployment
+        rendered = render_to_string(f.source, context)
 
-    if verbose:
-        print 'Rendering:', f['file']
-    
-    context = {}
-    if settings.CONTEXT:
-        context = settings.CONTEXT
-    context['for_deployment'] = for_deployment
-    rendered = render_to_string(f['file'], context)
-
-    if verbose:
-        print 'Saving rendered output to:', deploy_path
-    fout = open(deploy_path,'w')
-    fout.write(rendered)
-    fout.close()
+        if verbose:
+            print 'Saving rendered output to:', deploy_path
+        fout = open(deploy_path,'w')
+        fout.write(rendered)
+        fout.close()
+    elif verbose:
+        print 'Ignoring:', f.rel_path
 
 
-
-# DEVELOPMENT SERVER
-###############################################################################
-
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import mimetypes
-
-class HandleRequests(BaseHTTPRequestHandler):
-    """
-    A stupid-simple webserver that serves up static files, and nothing else.
-    Requests for a directory will return the contents of the INDEX_FILE.
-    """
-    def do_GET(self):
-        try:
-            path_append = ''
-            if len(self.path) > 0 and self.path[-1] == '/':
-                self.path = self.path + INDEX_FILE
-            file_path = DEPLOY_DIR + self.path + path_append
-            mtype = mimetypes.guess_type(file_path)[0]
-            f = open(file_path)
-            self.send_response(200)
-            self.send_header('Content-type', mtype)
-            self.end_headers()
-            self.wfile.write(f.read())
-            f.close()
-            return
-
-        except IOError:
-            self.send_error(404,'File Not Found: %s' % self.path)
-
-def runserver(port=8000):
-    """
-    Runs the web server at localhost and the specified port (default port 8000).
-    """
-    try:
-        server = HTTPServer(('', port), HandleRequests)
-        print 'Running server at localhost:%s...' % port
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print 'Shutting down server'
-        server.socket.close()
 
 
 # WATCH FUNCTIONS
@@ -402,21 +337,48 @@ def traverse_directories(t_path, file_handler=None,
         fobj.process()
         
 
-def prep_file(current_file, target_path):
-    f = {}
 
-    f['name'], f['ext'] = os.path.splitext(current_file)
 
-    if target_path:
-        f['name'] = f['name'].replace(target_path, '')[1:]
+# DEVELOPMENT SERVER
+###############################################################################
 
-    f['file'] = current_file
-    f['deploy'] = DEPLOY_DIR + current_file.replace(CONTENT_DIR,'')
-    f['deploy_root'] = DEPLOY_DIR
-    return f
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import mimetypes
 
-def is_ignorable(f):
-    return f.startswith(".") or f.startswith("_") or f.endswith("~") or f in IGNORE
+class HandleRequests(BaseHTTPRequestHandler):
+    """
+    A stupid-simple webserver that serves up static files, and nothing else.
+    Requests for a directory will return the contents of the INDEX_FILE.
+    """
+    def do_GET(self):
+        try:
+            path_append = ''
+            if len(self.path) > 0 and self.path[-1] == '/':
+                self.path = self.path + INDEX_FILE
+            file_path = DEPLOY_DIR + self.path + path_append
+            mtype = mimetypes.guess_type(file_path)[0]
+            f = open(file_path)
+            self.send_response(200)
+            self.send_header('Content-type', mtype)
+            self.end_headers()
+            self.wfile.write(f.read())
+            f.close()
+            return
+
+        except IOError:
+            self.send_error(404,'File Not Found: %s' % self.path)
+
+def runserver(port=8000):
+    """
+    Runs the web server at localhost and the specified port (default port 8000).
+    """
+    try:
+        server = HTTPServer(('', port), HandleRequests)
+        print 'Running server at localhost:%s...' % port
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print 'Shutting down server'
+        server.socket.close()
 
 
 # CONTROL
