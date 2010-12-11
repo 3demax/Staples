@@ -105,7 +105,7 @@ def build(**kwargs):
     if verbose:
         print 'Traversing content directory: %s...' % CONTENT_DIR
 
-    build_directories(CONTENT_DIR, parent_ignored=False, **kwargs)
+    build_directories(CONTENT_DIR, **kwargs)
     
     print '\nBuild done'
 
@@ -121,16 +121,16 @@ def build_directories(t_path, **kwargs):
 # These two functions basically just copy anything they are given over to
 # the deploy directory.
 
-def handle_directory(f, parent_ignored=False, **kwargs):
+def handle_directory(f, **kwargs):
     """
-    Directories not starting with an underscore (_) are created in the deploy
-    path. If a directory has an underscore, it is traversed, but it and its
-    contents are not copied.
+    Copies directories, unless they are ignorable or their
+    parent was ignored.
     """
     if not f.ignorable and not f.parent_ignored:
         if verbose:
             print 'Making directory: ', f.deploy_path
         os.mkdir(f.deploy_path)
+        parent_ignored = False
     else:
         if verbose:
             print 'Not duplicating directory'
@@ -291,7 +291,6 @@ def deploy(full=False):
     pickle.dump(scanner.file_list, last_mtimes_file)
     last_mtimes_file.close()
 
-
 def upload_file(current_file):
     deploy_path = current_file.replace(DEPLOY_DIR, REMOTE_ROOT)
     if verbose:
@@ -310,25 +309,6 @@ def make_remote_dir(current_file):
         ftp.mkd(deploy_path)
     except error_perm:
         pass
-
-
-# HELPERS
-###############################################################################
-
-def traverse_directories(t_path, file_handler=None,
-                        directory_handler=None, **kwargs):
-    """
-    Recursively traverses a given directory, passing the current file or
-    directory to the given handler, if any. Also passes through additional
-    keyword arguments to the handlers.
-    """
-    for f in glob.glob( os.path.join(t_path, '*') ):
-        fobj = File(f)
-        if fobj.is_directory:
-            traverse_directories(f.source, **kwargs)
-        fobj.process()
-        
-
 
 
 # DEVELOPMENT SERVER
