@@ -42,13 +42,12 @@ except ImportError:
 else:
     if __name__ == "__main__":
         print 'Found settings.py'
-    
 
 verbose=False
 
 class File(object):
     
-    def __init__(self, file_path, parent_ignored=False):
+    def __init__(self, file_path, parent_ignored=False, **kwargs):
         self.source = file_path
         self.rel_path = file_path.replace(CONTENT_DIR,'').lstrip('/')
         self.rel_parent, self.name = os.path.split(self.source)
@@ -57,7 +56,7 @@ class File(object):
     
     def process(self, **kwargs):
         if verbose:
-            print 'Processing: %s' % self.rel_path
+            print 'Processing:', self.rel_path
         if self.is_directory:
             if '/' in PROCESSORS:
                 p = PROCESSORS['/']
@@ -130,12 +129,11 @@ def handle_directory(f, **kwargs):
         if verbose:
             print 'Making directory: ', f.deploy_path
         os.mkdir(f.deploy_path)
-        parent_ignored = False
     else:
         if verbose:
             print 'Not duplicating directory'
-        parent_ignored = True
-    build_directories(f.source, parent_ignored=parent_ignored, **kwargs)
+        kwargs.update({'parent_ignored': True})
+    build_directories(f.source, **kwargs)
 
 def handle_others(f, **kwargs):
     """
@@ -241,76 +239,6 @@ class DirWatcher(object):
                     self.changed_files.append(f)
 
 
-# DEPLOY FUNCTIONS
-###############################################################################
-
-from ftplib import FTP, error_perm
-ftp = FTP()
-
-def deploy(full=False):
-    """
-    Initiates a full rebuild of the project, then deploys it using FTP to the
-    specified server, using the specified username and password.
-    """
-    print 'Rebuilding...'
-    build(for_deployment=True)
-    print '\nDeploying to %s...' % FTP_URL
-
-    try:
-        import cPickle as pickle
-    except ImportError:
-        import pickle
-
-    try:
-        last_mtimes_file = open(DEPLOY_TRACKING_FILE)
-    except:
-        print 'no file'
-        last_mtimes = {}
-    else:
-        try:
-            last_mtimes = pickle.load(last_mtimes_file)
-            last_mtimes_file.close()
-        except:
-            last_mtimes = {}
-
-    ftp.connect(FTP_URL)
-    ftp.login(user=FTP_USER, passwd=FTP_PWD)
-
-    scanner = DirWatcher(CONTENT_DIR, update=False)
-    scanner.file_list = last_mtimes
-
-    if full:
-        traverse_directories(DEPLOY_DIR, file_handler=upload_file,
-            directory_handler=make_remote_dir)
-    else:
-        changed_files = scanner.find_changed_files()
-        for f in changed_files:
-            f = prep_file(f[0], f[1])
-
-    last_mtimes_file = open(DEPLOY_TRACKING_FILE, 'w')
-    pickle.dump(scanner.file_list, last_mtimes_file)
-    last_mtimes_file.close()
-
-def upload_file(current_file):
-    deploy_path = current_file.replace(DEPLOY_DIR, REMOTE_ROOT)
-    if verbose:
-        print 'uploading', deploy_path
-    try:
-        ftp.delete(deploy_path)
-    except:
-        pass
-    ftp.storbinary('STOR ' + deploy_path, open(current_file))
-
-def make_remote_dir(current_file):
-    deploy_path = current_file.replace(DEPLOY_DIR, REMOTE_ROOT)
-    try:
-        if verbose:
-            print 'making directory', deploy_path
-        ftp.mkd(deploy_path)
-    except error_perm:
-        pass
-
-
 # DEVELOPMENT SERVER
 ###############################################################################
 
@@ -378,12 +306,6 @@ if __name__ == "__main__":
 
     elif 'watch' in sys.argv:
         watch()
-
-    elif 'deploy' in sys.argv:
-        deploy()
-    elif 'redeploy' in sys.argv:
-        deploy(full=True)
-
     else:
         print """
     Staples Usage:
