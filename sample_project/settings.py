@@ -41,6 +41,6 @@ INDEX_FILE = 'index.html'
 
 # Deploy information
 FTP_URL = 'ftp.example.com'
-DEPLOY_ROOT = '/example.com'
+REMOTE_ROOT = '/example.com'
 FTP_USER = 'user'
 FTP_PWD = 'password'

@@ -14,7 +14,7 @@ Alec Perkins, type(ish) inc
 License: UNLICENSE
 """
 
-__author__ = 'Alec Perkins, type(ish) inc'
+__author__ = 'type(ish) inc'
 __version__ = '0.1a'
 __license__ = 'UNLICENSE'
 
@@ -24,6 +24,8 @@ import os, shutil, commands, glob, sys
 PROJECT_ROOT = os.getcwd()
 CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
 DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
+
+REMOTE_ROOT = ''
 DEPLOY_TRACKING_FILE = os.path.join(PROJECT_ROOT, 'staples_deploy_info.p')
 
 INDEX_FILE = 'index.html'
@@ -40,8 +42,49 @@ except ImportError:
 else:
     if __name__ == "__main__":
         print 'Found settings.py'
+    
 
 verbose=False
+
+class File(object):
+    
+    def __init__(self, file_path):
+        self.source = file_path
+        self.rel_path = file_path.replace(CONTENT_DIR,'')
+        self.rel_parent, self.name = os.path.split(self.source)
+        self.ext = os.path.splitext(self.name)
+    
+    @property
+    def process(self):
+        if self.is_directory:
+            if '/' in PROCESSORS:
+                return = PROCESSORS['/']
+            else
+                return = handle_directory
+        elif self.ext in PROCESSORS:
+            return = PROCESSORS[self.ext]
+        elif '*' in PROCESSORS:
+            return = PROCESSORS['*']
+        else:
+            return = handle_others
+        
+        
+    @property
+    def deploy_path(self):
+        return os.path.join(DEPLOY_DIR, self.rel_path)
+    
+    @property
+    def remote_path(self):
+        return os.path.join(REMOTE_ROOT, self.rel_path)
+    
+    @property
+    def mtime(self):
+        return os.path.getmtime(self.source)
+    
+    @property
+    def is_directory(self):
+        return os.path.isdir(file_path)
+
 
 # BUILD FUNCTIONS
 ###############################################################################
@@ -58,7 +101,9 @@ def build(**kwargs):
     if verbose:
         print 'Traversing content directory: %s...' % CONTENT_DIR
 
-    traverse_directories(CONTENT_DIR, file_handler=delegate_file, directory_handler=delegate_directory, target_path=CONTENT_DIR, parent_ignored=False, **kwargs)
+    traverse_directories(CONTENT_DIR, file_handler=delegate_file,
+        directory_handler=delegate_directory, target_path=CONTENT_DIR,
+        parent_ignored=False, **kwargs)
     
     print '\nBuild done'
 
@@ -66,7 +111,7 @@ def delegate_directory(current_file, parent_ignored=False, target_path=None, **k
     if verbose:
         print "\nProcessing:", current_file
     f = prep_file(current_file, target_path)
-    if os.path.isdir(f['file']):
+    if current_file.is_directory():
         if PROCESSORS.get('directory', None):
             PROCESSORS[f['ext']](f, **kwargs)
         else:
@@ -230,7 +275,9 @@ class DirWatcher(object):
 
     def find_changed_files(self):
         self.changed_files = []
-        traverse_directories(self.target_directory, file_handler=self.update_mtimes, target_path=self.target_directory)
+        traverse_directories(self.target_directory,
+            file_handler=self.update_mtimes,
+            target_path=self.target_directory)
         return self.changed_files
 
     def update_mtimes(self, current_file, target_path=None):
@@ -294,7 +341,8 @@ def deploy(full=False):
     scanner.file_list = last_mtimes
 
     if full:
-        traverse_directories(DEPLOY_DIR, file_handler=upload_file, directory_handler=make_remote_dir)
+        traverse_directories(DEPLOY_DIR, file_handler=upload_file,
+            directory_handler=make_remote_dir)
     else:
         changed_files = scanner.find_changed_files()
         for f in changed_files:
@@ -306,7 +354,7 @@ def deploy(full=False):
 
 
 def upload_file(current_file):
-    deploy_path = current_file.replace(DEPLOY_DIR, DEPLOY_ROOT)
+    deploy_path = current_file.replace(DEPLOY_DIR, REMOTE_ROOT)
     if verbose:
         print 'uploading', deploy_path
     try:
@@ -316,7 +364,7 @@ def upload_file(current_file):
     ftp.storbinary('STOR ' + deploy_path, open(current_file))
 
 def make_remote_dir(current_file):
-    deploy_path = current_file.replace(DEPLOY_DIR, DEPLOY_ROOT)
+    deploy_path = current_file.replace(DEPLOY_DIR, REMOTE_ROOT)
     try:
         if verbose:
             print 'making directory', deploy_path
@@ -339,8 +387,7 @@ def traverse_directories(t_path, file_handler=None,
         if os.path.isdir(current_file):
             if directory_handler:
                 directory_handler(current_file, **kwargs)
-            traverse_directories(current_file, file_handler=file_handler,
-                            directory_handler=directory_handler, **kwargs)
+            traverse_directories(current_file, **kwargs)
         else:
             if file_handler:
                 file_handler(current_file, **kwargs)
@@ -366,7 +413,7 @@ def is_ignorable(f):
 ###############################################################################
 
 if __name__ == "__main__":
-    if 'verbose' in sys.argv:
+    if '-v' in sys.argv:
         verbose = True
     else:
         verbose = False
@@ -400,7 +447,7 @@ if __name__ == "__main__":
         watch     - `python staples.py watch`
         runserver - `python staples.py runserver [port]`'
     
-    Add 'verbose' to any command for verbose output.
+    Add '-v' to any command for verbose output.
     e.g. `python staples.py build verbose`
     
     Add '-d' to `build` for building with for_deployment set to True.

@@ -18,6 +18,7 @@ Staples is inspired by Django, and uses the `settings.py` method of defining pro
 * `python staples.py build`: build the project
 * `python staples.py watch`: build, then watch the content directory for changes and process changed files
 
+Add `-v` to any command for verbose output, e.g. `python staples.py watch -v`.
 
 ## Server
 
@@ -45,6 +46,8 @@ Note: `watch` does not remove files or folders from the deploy directory that ha
 ## Processors
 
 There are two default processors, one for files and one for directories. They simply copy over files and directories that don't match ignore parameters. This alone is kind of pointless, so it's helpful to specify processors for different kinds of files. The primary use is rendering templates. You can use any template renderer you like. Staples includes a Django template handler, which requires Django (though you don't need Django if you don't want to use it). "Structure" templates that are inside the content directory, such as a base template or an include, should be prefixed with `_` so they don't get copied over.
+
+You can override the default processors by mapping the desired handlers to '/' for directories and '*' for files.
 
 ### Django Templates
 To use the included Django templating, map the processor to the extension of your templates:
