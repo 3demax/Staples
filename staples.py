@@ -48,43 +48,46 @@ verbose=False
 
 class File(object):
     
-    def __init__(self, file_path):
+    def __init__(self, file_path, parent_ignored=False):
         self.source = file_path
         self.rel_path = file_path.replace(CONTENT_DIR,'')
         self.rel_parent, self.name = os.path.split(self.source)
         self.ext = os.path.splitext(self.name)
     
-    @property
-    def process(self):
+    def process(self, **kwargs):
+        if verbose:
+            print 'Processing: %s' % self.rel_path
         if self.is_directory:
             if '/' in PROCESSORS:
-                return = PROCESSORS['/']
-            else
-                return = handle_directory
+                p = PROCESSORS['/']
+            else:
+                p = handle_directory
+        elif self.name in PROCESSORS:
+            p = PROCESSORS[self.name]
         elif self.ext in PROCESSORS:
-            return = PROCESSORS[self.ext]
+            p = PROCESSORS[self.ext]
         elif '*' in PROCESSORS:
-            return = PROCESSORS['*']
+            p = PROCESSORS['*']
         else:
-            return = handle_others
+            p = handle_others
+        return p(self, **kwargs)
         
-        
     @property
-    def deploy_path(self):
-        return os.path.join(DEPLOY_DIR, self.rel_path)
+    def deploy_path(self): return os.path.join(DEPLOY_DIR, self.rel_path)
     
     @property
-    def remote_path(self):
-        return os.path.join(REMOTE_ROOT, self.rel_path)
+    def remote_path(self): return os.path.join(REMOTE_ROOT, self.rel_path)
     
     @property
-    def mtime(self):
-        return os.path.getmtime(self.source)
+    def mtime(self): return os.path.getmtime(self.source)
     
     @property
-    def is_directory(self):
-        return os.path.isdir(file_path)
+    def is_directory(self): return os.path.isdir(file_path)
 
+    @property
+    def ignorable(self):
+        return ( self.name.startswith(".") or self.name.startswith("_")
+                or self.name.endswith("~") or self.name in IGNORE )
 
 # BUILD FUNCTIONS
 ###############################################################################
@@ -101,11 +104,20 @@ def build(**kwargs):
     if verbose:
         print 'Traversing content directory: %s...' % CONTENT_DIR
 
-    traverse_directories(CONTENT_DIR, file_handler=delegate_file,
-        directory_handler=delegate_directory, target_path=CONTENT_DIR,
-        parent_ignored=False, **kwargs)
+    build_directories(CONTENT_DIR, parent_ignored=False, **kwargs)
     
     print '\nBuild done'
+
+def build_directories(t_path, **kwargs):
+    """
+    Recursively traverses a given directory, calling the given file's handler.
+    Keyword arguments are passed through to the handler.
+    """
+    for f in glob.glob( os.path.join(t_path, '*') ):
+        fobj = File(f)
+        if fobj.is_directory:
+            build_directories(f.source, **kwargs)
+        fobj.process(**kwargs)
 
 def delegate_directory(current_file, parent_ignored=False, target_path=None, **kwargs):
     if verbose:
@@ -383,14 +395,12 @@ def traverse_directories(t_path, file_handler=None,
     directory to the given handler, if any. Also passes through additional
     keyword arguments to the handlers.
     """
-    for current_file in glob.glob( os.path.join(t_path, '*') ):
-        if os.path.isdir(current_file):
-            if directory_handler:
-                directory_handler(current_file, **kwargs)
-            traverse_directories(current_file, **kwargs)
-        else:
-            if file_handler:
-                file_handler(current_file, **kwargs)
+    for f in glob.glob( os.path.join(t_path, '*') ):
+        fobj = File(f)
+        if fobj.is_directory:
+            traverse_directories(f.source, **kwargs)
+        fobj.process()
+        
 
 def prep_file(current_file, target_path):
     f = {}
