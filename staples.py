@@ -205,8 +205,7 @@ def watch():
         changed = watcher.find_changed_files()
         if len(changed) > 0:
             for f in changed:
-                if f[2]:
-                    delegate_file(f[1], f[0])
+                f.process()
 
 class DirWatcher(object):
     """
@@ -222,31 +221,24 @@ class DirWatcher(object):
 
     def find_changed_files(self):
         self.changed_files = []
-        traverse_directories(self.target_directory,
-            file_handler=self.update_mtimes,
-            target_path=self.target_directory)
+        self.update_mtimes(self.target_directory)
         return self.changed_files
 
-    def update_mtimes(self, current_file, target_path=None):
+
+    def update_mtimes(self, current_file):
         """
         Recursively traverses the directory, updating the dictionary of mtimes
         and the list of files changed since the last check.
         """
-        try:
-            mtime = os.path.getmtime(current_file)
-        except OSError:
-            # removed
-            mtime = None
-            try:
-                self.file_list.pop(current_file)
-            except KeyError:
-                pass
-            self.changed_files.append((current_file, target_path, False))
-        else:
-            # added or changed
-            if not current_file in self.file_list or self.file_list[current_file] != mtime:
-                self.file_list[current_file] = os.stat(current_file).st_mtime
-                self.changed_files.append((current_file, target_path, True))
+        for file in glob.glob( os.path.join(current_file, '*') ):
+            f = File(file)
+            if f.is_directory:
+                self.update_mtimes(f.source)
+            else:
+                mtime = f.mtime
+                if not f.source in self.file_list or self.file_list[f.source] != mtime:
+                    self.file_list[f.source] = mtime
+                    self.changed_files.append(f)
 
 
 # DEPLOY FUNCTIONS
