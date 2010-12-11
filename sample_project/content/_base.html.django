@@ -9,6 +9,10 @@
         <link rel="stylesheet" href="{{ urls.static }}css/screen.css" type="text/css" media="screen, projection" />
         <link rel="icon" href="/favicon.png" type="image/png"/>
         
+        {% if for_deployment %}
+        <!-- some analytics tracking code goes here -->
+        {% endif %}
+        
         {% block extra_head %}
         {% endblock extra_head %}
     </head>

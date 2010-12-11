@@ -1,4 +1,4 @@
-# Staples - Static Site Processing
+# Staples - Just the basics of static site processing
 
 Staples is for static sites, particularly ones where each page has a specific layout. It gives direct control of the structure, while still allowing for the advantages of templating and other automated processing. It follows the old-school model of the URLs being based on the directory structure, with `index.html` files and so on. Basically, Staples just passes everything through, but applies processing to specified files.
 
@@ -97,6 +97,8 @@ Processors are given a dictionary describing the file. Given a file at `/content
     }
 
 The deploy path given does not have to be where the processed output goes. The processor can place the output wherever it likes. (The root of the deploy path is provided as well, for this instance.) Since several operations involve passing the file through, it's convenient to have the deploy path provided.
+
+Additionally, processors get passed along any extra keyword arguments. This is helpful if there are things that need to be set differently, based on whether or not the project is being built for deployment. For example, when the `deploy` or `redeploy` commands run build, they give it the argument 'for_deployment'. The included Django processor looks for this, and includes it in the context. That way, the templates can have parts that only should show up in a production-deployed context, such as analytics tracking code, etc.
 
 ## Sample Project
 

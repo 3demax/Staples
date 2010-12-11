@@ -45,7 +45,7 @@ verbose=False
 
 # BUILD FUNCTIONS
 ###############################################################################
-def build():
+def build(**kwargs):
     print 'Starting build...\n'
     if verbose:
         print 'Removing any existing deploy directory'
@@ -58,21 +58,21 @@ def build():
     if verbose:
         print 'Traversing content directory: %s...' % CONTENT_DIR
 
-    traverse_directories(CONTENT_DIR, file_handler=delegate_file, directory_handler=delegate_directory, target_path=CONTENT_DIR, parent_ignored=False)
+    traverse_directories(CONTENT_DIR, file_handler=delegate_file, directory_handler=delegate_directory, target_path=CONTENT_DIR, parent_ignored=False, **kwargs)
     
     print '\nBuild done'
 
-def delegate_directory(current_file, parent_ignored=False, target_path=None):
+def delegate_directory(current_file, parent_ignored=False, target_path=None, **kwargs):
     if verbose:
         print "\nProcessing:", current_file
     f = prep_file(current_file, target_path)
     if os.path.isdir(f['file']):
         if PROCESSORS.get('directory', None):
-            PROCESSORS[f['ext']](f)
+            PROCESSORS[f['ext']](f, **kwargs)
         else:
-            handle_directory(f, parent_ignored=parent_ignored)
+            handle_directory(f, **kwargs)
 
-def delegate_file(current_file, parent_ignored=False, target_path=None):
+def delegate_file(current_file, parent_ignored=False, target_path=None, **kwargs):
     if verbose:
         print "\nProcessing:", current_file
     f = prep_file(current_file, target_path)
@@ -81,9 +81,9 @@ def delegate_file(current_file, parent_ignored=False, target_path=None):
         if verbose:
             print 'Ignored:', f['file']
     elif f['ext'] in PROCESSORS:
-        PROCESSORS[f['ext']](f)
+        PROCESSORS[f['ext']](f, **kwargs)
     elif not parent_ignored:
-        handle_others(f)
+        handle_others(f, **kwargs)
     else:
         if verbose:
             print 'Doing nothing - parent ignored and no processor'
@@ -93,7 +93,7 @@ def delegate_file(current_file, parent_ignored=False, target_path=None):
 # These two functions basically just copy anything they are given over to
 # the deploy directory.
 
-def handle_directory(f, parent_ignored):
+def handle_directory(f, parent_ignored=False, **kwargs):
     """
     Directories not starting with an underscore (_) are created in the deploy
     path. If a directory has an underscore, it is traversed, but it and its
@@ -109,7 +109,7 @@ def handle_directory(f, parent_ignored):
         parent_ignored = True
     traverse_directories(f['file'], parent_ignored=parent_ignored)
 
-def handle_others(f):
+def handle_others(f, **kwargs):
     """
     Simply copies files from the source path to the deploy path.
     """
@@ -120,7 +120,7 @@ def handle_others(f):
 
 # EXTRA HANDLERS
 
-def handle_django(f):
+def handle_django(f, for_deployment=False):
     """
     Renders templates using the Django template rendering engine. If the
     template ends in .django, the resulting output filename has that removed.
@@ -138,7 +138,12 @@ def handle_django(f):
 
     if verbose:
         print 'Rendering:', f['file']
-    rendered = render_to_string(f['file'], settings.CONTEXT if settings.CONTEXT else {})
+    
+    context = {}
+    if settings.CONTEXT:
+        context = settings.CONTEXT
+    context['for_deployment'] = for_deployment
+    rendered = render_to_string(f['file'], context)
 
     if verbose:
         print 'Saving rendered output to:', deploy_path
@@ -262,7 +267,7 @@ def deploy(full=False):
     specified server, using the specified username and password.
     """
     print 'Rebuilding...'
-    build()
+    build(for_deployment=True)
     print '\nDeploying to %s...' % FTP_URL
 
     try:
@@ -281,31 +286,23 @@ def deploy(full=False):
             last_mtimes_file.close()
         except:
             last_mtimes = {}
-    if full:
-        last_mtimes = {}
+
+    ftp.connect(FTP_URL)
+    ftp.login(user=FTP_USER, passwd=FTP_PWD)
 
     scanner = DirWatcher(CONTENT_DIR, update=False)
     scanner.file_list = last_mtimes
-    changed_files = scanner.find_changed_files()
-    print changed_files
-    
-    ftp.connect(FTP_URL)
-    ftp.login(user=FTP_USER, passwd=FTP_PWD)
-    
-    for cf in changed_files:
-        f = prep_file(cf[0], CONTENT_DIR)
-        print f['deploy']
-        name = os.path.split(f['deploy'])
-        if not is_ignorable(name[1]):
-            make_remote_dir(name[0])
-            upload_file(f['deploy'])
-        
+
+    if full:
+        traverse_directories(DEPLOY_DIR, file_handler=upload_file, directory_handler=make_remote_dir)
+    else:
+        changed_files = scanner.find_changed_files()
+        for f in changed_files:
+            f = prep_file(f[0], f[1])
+
     last_mtimes_file = open(DEPLOY_TRACKING_FILE, 'w')
     pickle.dump(scanner.file_list, last_mtimes_file)
     last_mtimes_file.close()
-
-    # traverse_directories(DEPLOY_DIR, file_handler=upload_file,
-    #                     directory_handler=make_remote_dir)
 
 
 def upload_file(current_file):
@@ -383,7 +380,10 @@ if __name__ == "__main__":
         runserver(port)
 
     elif 'build' in sys.argv:
-        build()
+        if '-d' in sys.argv:
+            build(for_deployment=True)
+        else:
+            build()
 
     elif 'watch' in sys.argv:
         watch()
@@ -402,4 +402,7 @@ if __name__ == "__main__":
     
     Add 'verbose' to any command for verbose output.
     e.g. `python staples.py build verbose`
+    
+    Add '-d' to `build` for building with for_deployment set to True.
+    e.g. `python staples.py build -d`
     """
