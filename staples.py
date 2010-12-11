@@ -160,6 +160,7 @@ def handle_django(f, for_deployment=False, **kwargs):
                       TEMPLATE_DIRS and CONTEXT
     """
     if not f.ignorable and not f.parent_ignored:
+        verbose = globals().get('verbose', False)
         from django.template.loader import render_to_string
         import settings
         os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
@@ -190,7 +191,62 @@ def handle_gallery(f, **kwargs):
     # sized image, up to CONTEXT.max_width
 
 def handle_markdown(f, **kwargs):
-    pass
+    if not f.ignorable and not f.parent_ignored:
+        from markdown import markdown
+        import codecs, re
+        json = None
+    
+        try:
+            import simplejson as json
+        except ImportError:
+            try:
+                import json
+            except ImportError:
+                pass
+    
+        try:
+            from settings import MD_PRE
+        except ImportError:
+            pre = ''
+        else:
+            pre = MD_PRE
+
+        try:
+            from settings import MD_POST
+        except ImportError:
+            post = ''
+        else:
+            post = MD_POST
+    
+        info = {}
+        if json:
+            text = codecs.open(f.source, mode="r", encoding="utf8").read()
+    
+            pattern = re.compile('!INFO.+\/INFO',re.DOTALL)
+            result = re.match(pattern,text)
+            info = result.group()
+            text = text.replace(info,'')
+            info = info.lstrip('!INFO').rstrip('/INFO')
+            info = json.loads(info)
+    
+        print 'Rendering:',f.rel_path, 'with INFO' if info else ''
+        rendered = markdown(text)
+    
+        deploy_path = f.deploy_path.replace(f.ext, '.html')
+        fout = open(deploy_path, 'w')
+        if len(info) > 0:
+            for k in info:
+                if k[:4] == 'meta':
+                    tags = '<meta type="%s" content="' % k.split('-')[1]
+                    pre = pre.replace(tags,tags + info[k])
+                else:
+                    tags = ('<%s>' % k, '</%s>' % k)
+                    pre = pre.replace(tags[0]+tags[1],tags[0] + info[k] + tags[1])
+    
+        fout.write(pre + rendered + post)
+        fout.close()
+    
+    
 
 # WATCH FUNCTIONS
 ###############################################################################

@@ -33,14 +33,3 @@ CONTEXT = {
         'home': '/',
     }
 }
-
-# Set this to be the name of the file used for serving directories.
-# Standard practice is to use 'index.html', though if your production
-# server uses something else, you can customize this setting accordingly.
-INDEX_FILE = 'index.html'
-
-# Deploy information
-FTP_URL = 'ftp.example.com'
-REMOTE_ROOT = '/example.com'
-FTP_USER = 'user'
-FTP_PWD = 'password'
