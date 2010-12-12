@@ -31,5 +31,7 @@ CONTEXT = {
     'urls': {
         'static': '/static/',
         'home': '/',
+        'project': '/project-qwerty/',
+        'project_gallery': '/project-qwerty/gallery.html'
     }
 }

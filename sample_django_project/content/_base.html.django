@@ -20,7 +20,8 @@
     <body>
         <div id="nav">
 			<h1><a href="{{ urls.home }}">Staples Sample</a></h1>
-            <h2>{% block heading %}{% endblock heading %}</h2>
+			{% block nav %}
+			{% endblock %}
        	</div>
 
         <div id="content">

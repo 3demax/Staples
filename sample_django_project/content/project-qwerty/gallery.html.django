@@ -1,0 +1,16 @@
+{% extends "_base.html.django" %}
+
+{% block title %}Project Qwerty - Gallery{% endblock title %}
+
+{% block nav %}
+    <a href="{{ urls.project }}">&laquo;</a>
+{% endblock nav %}
+
+{% block body %}
+    <h2>Gallery</h2>
+    <img src="typeish-logo.png"/>
+    <p class="caption">Some image</p>
+
+    <img src="typeish-icon.png"/>
+    <p class="caption">Another image</p>
+{% endblock body %}

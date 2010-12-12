@@ -1,0 +1,9 @@
+body {
+    margin: 0 auto;
+    width: 960px;
+}
+
+.caption {
+    font-size: 0.8em;
+    font-style: italic;
+}

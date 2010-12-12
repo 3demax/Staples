@@ -10,7 +10,7 @@ Loosely based on [aym-cms](https://github.com/lethain/aym-cms), and inspired by 
 
 The simplest usage is to just include `staples.py` in the project folder. However, Staples operates based on the current working directory, so the `staples.py` file itself can go anywhere that you can run it. It can even be added to your PATH and given executable permissions, turning it into a command. You can also rename it or use an alias to make the command simply `staples`.
 
-Staples is inspired by Django, and uses the `settings.py` method of defining project-specific variables, such as content paths, template directories, deployment settings, etc. While not required, the `settings.py` file is helpful as it also is responsible for mapping the processors to the kinds of files (see Building and Watching). Any processors you have need to be in a spot accessible to Python and imported in settings. See `settings.py` in the sample project for an example of this.
+Staples is inspired by Django, and uses the `settings.py` method of defining project-specific variables, such as content paths, template directories, deployment settings, etc. While not required, the `settings.py` file is helpful as it also is responsible for mapping the processors to the kinds of files (see Building and Watching). Any processors you have need to be in a spot accessible to Python and imported in settings. See `settings.py` in the sample projects for an example of this.
 
 
 ## Usage

@@ -128,7 +128,10 @@ def handle_directory(f, **kwargs):
     if not f.ignorable and not f.parent_ignored:
         if verbose:
             print 'Making directory: ', f.deploy_path
-        os.mkdir(f.deploy_path)
+        try:
+            os.mkdir(f.deploy_path)
+        except OSError:
+            pass
     else:
         if verbose:
             print 'Not duplicating directory'
@@ -159,8 +162,8 @@ def handle_django(f, for_deployment=False, **kwargs):
         settings.py - placed in the same directory and defines both
                       TEMPLATE_DIRS and CONTEXT
     """
+    verbose = globals().get('verbose', False)
     if not f.ignorable and not f.parent_ignored:
-        verbose = globals().get('verbose', False)
         from django.template.loader import render_to_string
         import settings
         os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
@@ -302,6 +305,7 @@ class DirWatcher(object):
         for file in glob.glob( os.path.join(current_file, '*') ):
             f = File(file)
             if f.is_directory:
+                f.process()
                 self.update_mtimes(f.source)
             else:
                 mtime = f.mtime
