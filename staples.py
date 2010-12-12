@@ -191,6 +191,14 @@ def handle_gallery(f, **kwargs):
     # sized image, up to CONTEXT.max_width
 
 def handle_markdown(f, **kwargs):
+    """
+    A markdown processor. Requires the `markdown` module. It allows for
+    prepend and append code to wrap the rendered page in proper HTML structure.
+    Includes support for a meta-information notation in the markdown source
+    files for title and meta tags.
+    
+    The extension of the source file is replaced with `.html`.
+    """
     if not f.ignorable and not f.parent_ignored:
         from markdown import markdown
         import codecs, re
@@ -224,10 +232,11 @@ def handle_markdown(f, **kwargs):
     
             pattern = re.compile('!INFO.+\/INFO',re.DOTALL)
             result = re.match(pattern,text)
-            info = result.group()
-            text = text.replace(info,'')
-            info = info.lstrip('!INFO').rstrip('/INFO')
-            info = json.loads(info)
+            if result:
+                info = result.group()
+                text = text.replace(info,'')
+                info = info.lstrip('!INFO').rstrip('/INFO')
+                info = json.loads(info)
     
         print 'Rendering:',f.rel_path, 'with INFO' if info else ''
         rendered = markdown(text)
@@ -237,11 +246,10 @@ def handle_markdown(f, **kwargs):
         if len(info) > 0:
             for k in info:
                 if k[:4] == 'meta':
-                    tags = '<meta type="%s" content="' % k.split('-')[1]
-                    pre = pre.replace(tags,tags + info[k])
+                    tag = '<meta type="%s" content="' % k.split('-')[1]
                 else:
-                    tags = ('<%s>' % k, '</%s>' % k)
-                    pre = pre.replace(tags[0]+tags[1],tags[0] + info[k] + tags[1])
+                    tag = '<%s>' % k
+                pre = pre.replace(tag, tag + info[k])
     
         fout.write(pre + rendered + post)
         fout.close()

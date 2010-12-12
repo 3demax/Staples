@@ -1,4 +1,5 @@
-# Staples - Just the basics of static site processing
+# Staples
+## Just the basics of static site processing
 
 Staples is for static sites, particularly ones where each page has a specific layout. It gives direct control of the structure, while still allowing for the advantages of templating and other automated processing. It follows the old-school model of the URLs being based on the directory structure, with `index.html` files and so on. Basically, Staples just passes everything through, but applies processing to specified files.
 
@@ -45,12 +46,12 @@ Note: `watch` does not remove files or folders from the deploy directory that ha
 
 ## Processors
 
-There are two default processors, one for files and one for directories. They simply copy over files and directories that don't match ignore parameters. This alone is kind of pointless, so it's helpful to specify processors for different kinds of files. The primary use is rendering templates. You can use any template renderer you like. Staples includes a Django template handler, which requires Django (though you don't need Django if you don't want to use it). "Structure" templates that are inside the content directory, such as a base template or an include, should be prefixed with `_` so they don't get copied over.
+There are two default processors, one for files and one for directories. They simply copy over files and directories that don't match ignore parameters. This alone is kind of pointless, so it's helpful to specify processors for different kinds of files. The primary use is rendering templates. You can use any template renderer you like. Staples includes a Django template processor, which requires Django (though you don't need Django if you don't want to use it). "Structure" templates that are inside the content directory, such as a base template or an include, should be prefixed with `_` so they don't get copied over. Staples also includes a markdown processor, which requires the markdown python module.
 
 You can override the default processors by mapping the desired handlers to '/' for directories and '*' for files.
 
-### Django Templates
-To use the included Django templating, map the processor to the extension of your templates:
+### Django Processor
+To use the included Django processor, `handle_django`, map the processor to the extension of your templates:
 
     PROCESSORS = {
         '.django': handle_django,
@@ -62,7 +63,7 @@ If you include the `.django` extension in your Django templates, it will get rem
 #### Required
 
 * [Django](http://www.djangoproject.com/) - any version that can handle the templates you give it
-* settings.py - placed in the same directory and defines TEMPLATE_DIRS
+* `settings.py` - placed in the same directory and defines TEMPLATE_DIRS
 
 The TEMPLATE_DIRS variable contains all the locations for the renderer to look for templates in:
 
@@ -73,9 +74,9 @@ The TEMPLATE_DIRS variable contains all the locations for the renderer to look f
 
 #### Optional
 
-* Context - a dictionary that provides variables and such to the templates when rendered.
+* CONTEXT - a dictionary that provides variables and such to the templates when rendered.
 
-Sample context:
+##### Sample context
 
     CONTEXT = {
         'pub_date': datetime.datetime(2010,11,1),
@@ -84,28 +85,61 @@ Sample context:
         }
     }
 
+### Markdown Processor
+To use the included markdown processor, `handle_markdown`, map the processor to the extension of your source files:
+
+    PROCESSORS = {
+        '.md': handle_markdown,
+        ...
+    }
+
+Whichever extension you map the handler to will be replaced by .html in the output files. e.g. `index.md` becomes `index.html`.
+
+#### Required
+
+* [`markdown`](http://www.freewisdom.org/projects/python-markdown/)
+
+#### Optional
+
+* MD_PRE - a snippet of code that is prepended to every rendered markdown file
+* MD_POST - a snippet of code that is appended to every rendered markdown file
+* INFO blocks (requires [`json`](http://docs.python.org/library/json.html) or [`simplejson`](http://pypi.python.org/pypi/simplejson/) and use of MD\_PRE)
+
+##### MD\_PRE & MD\_POST
+The markdown renderer does not wrap the output in tags like `<html>` or `<body>`, so MD\_PRE and MD\_POST are useful for wrapping the output in proper HTML structure. Each is independently optional, though in most cases both would be used. See the `settings.py` file in 'sample\_markdown\_project' for examples of these. In order to customize things like `<title>` and `<meta>` on each page, a meta notation is provided.
+
+##### INFO blocks:
+The included markdown processor supports a meta-information notation for describing title and meta tags for each page. The format is a JSON-style object at the top of the file. This object is read in and used to populate the various tags in the MD_PRE code snippet.
+
+INFO blocks are preceded by `!INFO` and closed with `/INFO`. Inside the block, the information should be described in a dictionary that maps tags to content. The notation requires that base of these tags be present in the MD\_PRE snippet.
+
+For example, given the INFO block:
+
+    !INFO
+    {
+        "title": "Some title stuff",
+    }
+    /INFO
+
+and `<title></title>` in the MD_PRE snippet, the resulting tag will be
+
+    <title>Some title stuff</title>
+
+See the 'sample\_markdown\_project' for an example of this, using meta tags, in action.
+
 
 ## Custom Processors
 
 If you have something that needs to be done to a type of file, you can make a processor for it. Simply create a function that takes in a file and outputs whatever it needs to output, then map it to the extension in `settings.py`. You can also override what is done to directories using the `directory` key.
 
-Processors are given a dictionary describing the file. Given a file at `/content/path/foo.bar`, the dictionary looks like this:
+Processors are given a File object describing the file. See the source for the attributes available.
 
-    {
-        'file':        '/content/path/foo.bar',    # The path of the file
-        'name':        'foo',                      # The name of the file
-        'ext':         '.bar',                     # The extension of the file, including '.'
-        'deploy':      '/deploy/path/foo.bar',     # The deploy path
-        'deploy_root': '/deploy'                   # For convenience, the root of the deploy path
-    }
+The deploy path given does not have to be where the processed output goes. The processor can place the output wherever it likes. Since most operations involve passing the file through in some way, it's convenient to have the deploy path provided.
 
-The deploy path given does not have to be where the processed output goes. The processor can place the output wherever it likes. (The root of the deploy path is provided as well, for this instance.) Since several operations involve passing the file through, it's convenient to have the deploy path provided.
 
-Additionally, processors get passed along any extra keyword arguments. This is helpful if there are things that need to be set differently, based on whether or not the project is being built for deployment. For example, when the `deploy` or `redeploy` commands run build, they give it the argument 'for_deployment'. The included Django processor looks for this, and includes it in the context. That way, the templates can have parts that only should show up in a production-deployed context, such as analytics tracking code, etc.
+## Sample Projects
 
-## Sample Project
-
-The sample project included has some basic templates, styles, and other content in both its "source" form and its deployed form. It uses Django templates, so to try building or watching with it you will need Django. (You can also just remove the '.django' handler from `settings.py`.) You can also try the development server with it. The settings file includes sample FTP settings, though obviously the `deploy` command won't work with them.
+There are sample projects that demonstrate how to use the included processors. Each has basic templates, styles, and other content in both the source form and deployed form, for comparison. Logically, the sample Django project requires Django, and the sample Markdown project requires `markdown`. There is also a basic project with no settings, included simply for demonstration.
 
 
 ## TODO
@@ -113,4 +147,3 @@ The sample project included has some basic templates, styles, and other content 
 * Optional FTP or SSH upload for `python staples.py deploy` and `python staples.py redeploy` commands - needs to save a list of the mtimes.
 * Include processors for pystache, Closure Compiler, SASS compiler, etc
 * Combine watch and runserver so only one terminal is needed
-* DRY-up the file manipulation/traversal code

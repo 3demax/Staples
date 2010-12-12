@@ -12,7 +12,7 @@ IGNORE = (
 )
 
 
-# import the included Django processor from staples
+# import the included Markdown processor from staples
 from staples import handle_markdown
 
 PROCESSORS = {
@@ -25,8 +25,9 @@ PROCESSORS = {
 MD_PRE = """<!DOCTYPE html>
 <html>
 <head>
-    <title></title>
+    <title> - Sample Markdown Project</title>
     <meta type="description" content="" />
+    <link rel="stylesheet" href="/css/style.css" type="text/css" media="screen" />
 </head>
 <body>
 """
