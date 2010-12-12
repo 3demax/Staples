@@ -1,4 +1,4 @@
-import os
+import os, datetime
 
 PROJECT_ROOT = os.getcwd()
 
@@ -25,9 +25,11 @@ PROCESSORS = {
 # Django template rendering stuff
 TEMPLATE_DIRS = (
     os.path.join(PROJECT_ROOT,'content'),
+    os.path.join(PROJECT_ROOT,'templates'),
 )
 
 CONTEXT = {
+    'pub_date': datetime.datetime(2010,11,1),
     'urls': {
         'static': '/static/',
         'home': '/',

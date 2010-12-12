@@ -8,7 +8,7 @@ Loosely based on [aym-cms](https://github.com/lethain/aym-cms), and inspired by 
 
 ## Installation
 
-The simplest usage is to just include `staples.py` in the project folder. However, Staples operates based on the current working directory, so the `staples.py` file itself can go anywhere that you can run it. It can even be added to your PATH and given executable permissions, turning it into a command. You can also rename it or use an alias to make the command simply `staples`.
+The core is entirely contained within the file `staples.py`. The simplest usage is to just include `staples.py` in the project folder. However, Staples operates based on the current working directory, so the `staples.py` file itself can go anywhere that you can run it. It can even be added to your PATH and given executable permissions, turning it into a command. You can also rename it or use an alias to make the command simply `staples`.
 
 Staples is inspired by Django, and uses the `settings.py` method of defining project-specific variables, such as content paths, template directories, deployment settings, etc. While not required, the `settings.py` file is helpful as it also is responsible for mapping the processors to the kinds of files (see Building and Watching). Any processors you have need to be in a spot accessible to Python and imported in settings. See `settings.py` in the sample projects for an example of this.
 
@@ -32,7 +32,7 @@ To use the server, you first have to build the project so that there is a deploy
 
 Everything goes into `content/` and comes out in `deploy/`, or whatever you set the content and deploy directories to be. Files and directories starting with `_` will not be copied (but will be processed). e.g. If your sass directory is `_sass`, the sass files will not be copied, but the sass processor can still compile them into CSS. It should be noted that `build` will delete the deploy directory and everything in it, then replace it with the processed content.
 
-Files and folders will be processed according to the specified settings. The processors are mapped to extensions using a dictionary in `settings.py`.
+Files and folders will be processed according to the specified settings. The processors are mapped to extensions using a dictionary in `settings.py`. Here, the extension `.ext` is mapped to the processor function `handle_ext`.
 
     PROCESSORS = {
         '.ext': handle_ext,
@@ -46,7 +46,7 @@ Note: `watch` does not remove files or folders from the deploy directory that ha
 
 ## Processors
 
-There are two default processors, one for files and one for directories. They simply copy over files and directories that don't match ignore parameters. This alone is kind of pointless, so it's helpful to specify processors for different kinds of files. The primary use is rendering templates. You can use any template renderer you like. Staples includes a Django template processor, which requires Django (though you don't need Django if you don't want to use it). "Structure" templates that are inside the content directory, such as a base template or an include, should be prefixed with `_` so they don't get copied over. Staples also includes a markdown processor, which requires the markdown python module.
+There are two default processors, one for files and one for directories. They simply copy over files and directories that don't match ignore parameters. This alone is kind of pointless, so it's helpful to specify processors for different kinds of files. The primary use is rendering templates. You can use any template renderer you like. Staples includes a Django template processor, which requires Django (though you don't need Django if you don't want to use it). Staples also includes a Markdown processor, which requires the `markdown` Python module.
 
 You can override the default processors by mapping the desired handlers to '/' for directories and '*' for files.
 
@@ -60,15 +60,18 @@ To use the included Django processor, `handle_django`, map the processor to the 
 
 If you include the `.django` extension in your Django templates, it will get removed, so the secondary extension should be the desired extension of the output. e.g. `index.html.django` or `index.django.html` become `index.html` and `sitemap.xml.django` or `sitemap.django.xml` become `sitemap.xml`
 
+The Django processor demonstrates two ways to use structure templates. The first is simply including it in the content directory, but prepended with `_` so it does not get copied over. The second, more semantic way, is to have a folder outside the content directory that is included in the TEMPLATE_DIRS variable. These templates can be referenced by templates inside the content directory, but are not touched by the general processing action.
+
 #### Required
 
 * [Django](http://www.djangoproject.com/) - any version that can handle the templates you give it
 * `settings.py` - placed in the same directory and defines TEMPLATE_DIRS
 
-The TEMPLATE_DIRS variable contains all the locations for the renderer to look for templates in:
+The TEMPLATE_DIRS variable contains all the locations for the renderer to look for templates in. These should be absolute paths.
 
     TEMPLATE_DIRS = (
-        os.path.join(ROOT_PATH,'content'),
+        os.path.join(ROOT_PATH, 'content'),
+        os.path.join(ROOT_PATH, 'templates'),
         ...
     )
 
@@ -79,7 +82,7 @@ The TEMPLATE_DIRS variable contains all the locations for the renderer to look f
 ##### Sample context
 
     CONTEXT = {
-        'pub_date': datetime.datetime(2010,11,1),
+        'pub_date': datetime.datetime(2010, 11, 1),
         'urls': {
             'static': '/static/'
         }
@@ -142,8 +145,19 @@ The deploy path given does not have to be where the processed output goes. The p
 There are sample projects that demonstrate how to use the included processors. Each has basic templates, styles, and other content in both the source form and deployed form, for comparison. Logically, the sample Django project requires Django, and the sample Markdown project requires `markdown`. There is also a basic project with no settings, included simply for demonstration.
 
 
+## Sites that use Staples
+
+* [alecperkins.net](http://alecperkins.net) (Django templating)
+* [typeish.net](http://typeish.net) (Django templating)
+
+
 ## TODO
+
 * Pattern-based matching (wildcards, don't limit to extensions or keywords like 'directory')
 * Optional FTP or SSH upload for `python staples.py deploy` and `python staples.py redeploy` commands - needs to save a list of the mtimes.
 * Include processors for pystache, Closure Compiler, SASS compiler, etc
 * Combine watch and runserver so only one terminal is needed
+
+## LICENSE 
+
+Staples is public domain, or equivalent. See: UNLICENSE.

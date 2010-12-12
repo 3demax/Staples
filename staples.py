@@ -126,15 +126,11 @@ def handle_directory(f, **kwargs):
     parent was ignored.
     """
     if not f.ignorable and not f.parent_ignored:
-        if verbose:
-            print 'Making directory: ', f.deploy_path
         try:
             os.mkdir(f.deploy_path)
         except OSError:
             pass
     else:
-        if verbose:
-            print 'Not duplicating directory'
         kwargs.update({'parent_ignored': True})
     build_directories(f.source, **kwargs)
 

@@ -1,0 +1,1 @@
+<div id="footer">Copyleft {{ pub_date|date:"Y" }} - Some Organization. Last updated {% now "Y F d" %}</div>
