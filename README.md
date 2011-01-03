@@ -149,14 +149,13 @@ There are sample projects that demonstrate how to use the included processors. E
 
 * [alecperkins.net](http://alecperkins.net) (Django templating)
 * [typeish.net](http://typeish.net) (Django templating)
-
+* [supriyos.in](http://supriyos.in) (Django templating)
 
 ## TODO
 
 * Pattern-based matching (wildcards, don't limit to extensions or keywords like 'directory')
 * Optional FTP or SSH upload for `python staples.py deploy` and `python staples.py redeploy` commands - needs to save a list of the mtimes.
 * Include processors for pystache, Closure Compiler, SASS compiler, etc
-* Combine watch and runserver so only one terminal is needed
 
 ## LICENSE 
 
