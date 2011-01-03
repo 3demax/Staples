@@ -35,13 +35,14 @@ PROCESSORS = {}
 # Look for a settings.py in the current working directory
 sys.path.append(PROJECT_ROOT)
 try:
+    import settings
     from settings import *
 except ImportError:
     if __name__ == "__main__":
         print 'No settings.py found, using defaults.\n'
 else:
     if __name__ == "__main__":
-        print 'Found settings.py'
+        print 'Using settings file %s' % settings.__file__[:-1]
 
 verbose=False
 
