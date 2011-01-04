@@ -47,14 +47,14 @@ else:
 verbose=False
 
 class File(object):
-    
+
     def __init__(self, file_path, parent_ignored=False, **kwargs):
         self.source = file_path
         self.rel_path = file_path.replace(CONTENT_DIR,'').lstrip('/')
         self.rel_parent, self.name = os.path.split(self.source)
         self.ext = os.path.splitext(self.name)[1]
         self.parent_ignored = parent_ignored
-    
+
     def process(self, **kwargs):
         if verbose:
             print 'Processing:', self.rel_path
@@ -72,16 +72,16 @@ class File(object):
         else:
             p = handle_others
         return p(self, **kwargs)
-        
+
     @property
     def deploy_path(self): return os.path.join(DEPLOY_DIR, self.rel_path)
-    
+
     @property
     def remote_path(self): return os.path.join(REMOTE_ROOT, self.rel_path)
-    
+
     @property
     def mtime(self): return os.path.getmtime(self.source)
-    
+
     @property
     def is_directory(self): return os.path.isdir(self.source)
 
@@ -97,16 +97,16 @@ def build(**kwargs):
     if verbose:
         print 'Removing any existing deploy directory'
     shutil.rmtree(DEPLOY_DIR, ignore_errors=True)
-    
+
     if verbose:
-        print 'Creating deploy directory: ', DEPLOY_DIR 
+        print 'Creating deploy directory: ', DEPLOY_DIR
     os.mkdir(DEPLOY_DIR)
 
     if verbose:
         print 'Traversing content directory: %s...' % CONTENT_DIR
 
     build_directories(CONTENT_DIR, **kwargs)
-    
+
     print '\nBuild done'
 
 def build_directories(t_path, **kwargs):
@@ -116,6 +116,21 @@ def build_directories(t_path, **kwargs):
     """
     for file in glob.glob( os.path.join(t_path, '*') ):
         File(file, **kwargs).process(**kwargs)
+
+# HELPER FUNCTIONS
+
+def strip_extension(filepath, ext):
+    """
+    Safely strips file extensions.
+    """
+    if not ext.startswith("."):
+        ext = "." + ext
+    dirname = os.path.dirname(filepath)
+    basename = os.path.basename(filepath).replace(ext, "")
+    if not basename:
+        raise ValueError("Stripping '%s' will cause the file name to be blank." % ext)
+    return os.path.join(dirname, basename)
+
 
 # DEFAULT HANDLERS
 # These two functions basically just copy anything they are given over to
@@ -153,7 +168,7 @@ def handle_django(f, for_deployment=False, **kwargs):
     """
     Renders templates using the Django template rendering engine. If the
     template ends in .django, the resulting output filename has that removed.
-    
+
     Requires:
         Django - any version that can handle the templates you give it
         settings.py - placed in the same directory and defines both
@@ -163,25 +178,26 @@ def handle_django(f, for_deployment=False, **kwargs):
     if not f.ignorable and not f.parent_ignored:
         from django.template.loader import render_to_string
         import settings
+
         os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
-        deploy_path = f.deploy_path.replace('.django','')
+        deploy_path = strip_extension(f.deploy_path, "django")
 
         if verbose:
-            print 'Rendering:', f.rel_path
-    
+            print "Rendering:", f.rel_path
+
         context = {}
         if settings.CONTEXT:
             context = settings.CONTEXT
-        context['for_deployment'] = for_deployment
+        context["for_deployment"] = for_deployment
         rendered = render_to_string(f.source, context)
 
         if verbose:
-            print 'Saving rendered output to:', deploy_path
-        fout = open(deploy_path,'w')
+            print "Saving rendered output to:", deploy_path
+        fout = open(deploy_path,"w")
         fout.write(rendered)
         fout.close()
     elif verbose:
-        print 'Ignoring:', f.rel_path
+        print "Ignoring:", f.rel_path
 
 
 def handle_gallery(f, **kwargs):
@@ -196,14 +212,14 @@ def handle_markdown(f, **kwargs):
     prepend and append code to wrap the rendered page in proper HTML structure.
     Includes support for a meta-information notation in the markdown source
     files for title and meta tags.
-    
+
     The extension of the source file is replaced with `.html`.
     """
     if not f.ignorable and not f.parent_ignored:
         from markdown import markdown
         import codecs, re
         json = None
-    
+
         try:
             import simplejson as json
         except ImportError:
@@ -211,7 +227,7 @@ def handle_markdown(f, **kwargs):
                 import json
             except ImportError:
                 pass
-    
+
         try:
             from settings import MD_PRE
         except ImportError:
@@ -225,11 +241,11 @@ def handle_markdown(f, **kwargs):
             post = ''
         else:
             post = MD_POST
-    
+
         info = {}
         if json:
             text = codecs.open(f.source, mode="r", encoding="utf8").read()
-    
+
             pattern = re.compile('!INFO.+\/INFO',re.DOTALL)
             result = re.match(pattern,text)
             if result:
@@ -237,10 +253,10 @@ def handle_markdown(f, **kwargs):
                 text = text.replace(info,'')
                 info = info.lstrip('!INFO').rstrip('/INFO')
                 info = json.loads(info)
-    
+
         print 'Rendering:',f.rel_path, 'with INFO' if info else ''
         rendered = markdown(text)
-    
+
         deploy_path = f.deploy_path.replace(f.ext, '.html')
         fout = open(deploy_path, 'w')
         if len(info) > 0:
@@ -250,11 +266,11 @@ def handle_markdown(f, **kwargs):
                 else:
                     tag = '<%s>' % k
                 pre = pre.replace(tag, tag + info[k])
-    
+
         fout.write(pre + rendered + post)
         fout.close()
-    
-    
+
+
 
 # WATCH FUNCTIONS
 ###############################################################################
@@ -496,10 +512,10 @@ if __name__ == "__main__":
         build     - `python staples.py build`
         watch     - `python staples.py watch`
         runserver - `python staples.py runserver [port]`'
-    
+
     Add '-v' to any command for verbose output.
     e.g. `python staples.py build verbose`
-    
+
     Add '-d' to `build` for building with for_deployment set to True.
     e.g. `python staples.py build -d`
     """
