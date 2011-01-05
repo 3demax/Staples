@@ -1,0 +1,17 @@
+{% extends "base.html.django" %}
+
+{% block title %}{{ gallery.name }} - {{ num }} - {{ url }}{% endblock title %}
+
+{% block nav %}
+    <h2><a href="{{ gallery_index }}">{{ gallery.name }}</a></h2>
+{% endblock nav %}
+
+{% block body %}
+<div id="photo-wrapper">
+    <p class="photo-info">
+        {% if prev %}<a class="prev" href="{{ prev }}">&laquo;</a>{% endif %}<span>{{ num }} - {{ url }}</span>{% if next %}<a class="next" href="{{ next }}">&raquo;</a>{% endif %}
+    </p>
+    <img class="full-photo" src="{{ url }}" />
+    {% if caption %}<p>{{ caption }}</p>{% endif %}
+</div>
+{% endblock body %}

@@ -1,0 +1,18 @@
+{% extends "base.html.django" %}
+
+{% block title %}{{ gallery.name }}{% endblock title %}
+
+{% block nav %}
+    <h2><a href="{{ gallery_index }}">{{ gallery.name }}</a></h2>
+{% endblock nav %}
+
+{% block body %}
+    {{ gallery.description }}
+    <ul class="gallery-index">
+    {% for photo in photo_list %}
+        <li class="thumbnail">
+            <a href="{{ photo.num }}.html"><img src="{{ thumbnail_prefix }}{{ photo.url }}" /></a>
+        </li>
+    {% endfor %}
+    <ul>
+{% endblock body %}

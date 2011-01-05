@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+        <title>My Photos - {% block title %}{% endblock title %}</title>
+
+        <link rel="stylesheet" href="/screen.css" type="text/css" media="screen, projection" />
+        
+        {% block extra_head %}
+        {% endblock extra_head %}
+    </head>
+
+    <body>
+        <div id="nav">
+			<h1><a href="{{ urls.home }}">My Photos</a></h1>
+			{% block nav %}{% endblock nav %}
+       	</div>
+
+        <div id="content">
+            {% block body %}
+            {% endblock body %}
+        </div>
+        
+        {% block extra_body %}
+        {% endblock extra_body %}
+    </body>
+
+</html>

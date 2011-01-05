@@ -1,0 +1,10 @@
+{% extends "base.html.django" %}
+
+{% block title %}A Sample Gallery{% endblock title %}
+
+{% block body %}
+    <ul class="gallery-list">
+        <li class="thumbnail"><a href="/yosemite/">Yosemite and Mono Lake<br /><img src="/yosemite/thumb-100_0232.jpg" /></a></li>
+        <li class="thumbnail"><a href="/apple-picking/">Apple Picking<br /><img src="/apple-picking/thumb-SAM_5600.jpg" /></a></li>
+    </ul>
+{% endblock body %}
