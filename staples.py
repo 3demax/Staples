@@ -57,13 +57,14 @@ class File(object):
     def process(self, **kwargs):
         if verbose:
             print 'Processing:', self.rel_path
-        if self.is_directory:
+        if self.name in PROCESSORS:
+            p = PROCESSORS[self.name]
+        elif self.is_directory:
             if '/' in PROCESSORS:
                 p = PROCESSORS['/']
             else:
                 p = handle_directory
-        elif self.name in PROCESSORS:
-            p = PROCESSORS[self.name]
+
         elif self.ext in PROCESSORS:
             p = PROCESSORS[self.ext]
         elif '*' in PROCESSORS:
@@ -198,12 +199,6 @@ def handle_django(f, for_deployment=False, **kwargs):
     elif verbose:
         print "Ignoring:", f.rel_path
 
-
-def handle_gallery(f, **kwargs):
-    pass
-    # build a gallery using a folder of images, creating an index.html file
-    # with all of the images, and an N.html file for each image with the full
-    # sized image, up to CONTEXT.max_width
 
 def handle_markdown(f, **kwargs):
     """
