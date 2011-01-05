@@ -8,9 +8,9 @@ has no external requirements itself, beyond the Python Standard Library.
 Specific processors, such as the included Django template renderer, will
 have their own requirements.
 
-Info and source: http://github.com/typeish/Staples
+Info and source: http://github.com/typeish/staples
 
-Alec Perkins, type(ish) inc
+type(ish) inc
 License: UNLICENSE
 """
 
@@ -26,7 +26,6 @@ CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
 DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
 
 REMOTE_ROOT = ''
-DEPLOY_TRACKING_FILE = os.path.join(PROJECT_ROOT, 'staples_deploy_info.p')
 
 INDEX_FILE = 'index.html'
 IGNORE = ()
