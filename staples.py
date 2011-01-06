@@ -46,7 +46,10 @@ else:
 verbose=False
 
 class File(object):
-
+    """
+    An object that describes a file to be operated on, with some attributes
+    that help manipulate the paths and names.
+    """
     def __init__(self, file_path, parent_ignored=False, **kwargs):
         self.source = file_path
         self.rel_path = file_path.replace(CONTENT_DIR,'').lstrip('/')
@@ -55,6 +58,9 @@ class File(object):
         self.parent_ignored = parent_ignored
 
     def process(self, **kwargs):
+        """
+        Identifies the appropriate processor for the file and calls it.
+        """
         if verbose:
             print 'Processing:', self.rel_path
         if self.name in PROCESSORS:
@@ -133,7 +139,7 @@ def strip_extension(filepath, ext):
 
 
 # DEFAULT HANDLERS
-# These two functions basically just copy anything they are given over to
+# These two functions just copy anything they are given over to
 # the deploy directory.
 
 def handle_directory(f, **kwargs):
