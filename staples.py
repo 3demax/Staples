@@ -10,7 +10,7 @@ have their own requirements.
 
 Info and source: http://github.com/typeish/staples
 
-type(ish) inc
+type(ish), inc.
 License: UNLICENSE
 """
 

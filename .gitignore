@@ -20,3 +20,4 @@ syntax: glob
 .svn
 .CVS
 .hg*
+staples.wiki/
