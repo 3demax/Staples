@@ -26,7 +26,7 @@ Commands:
 
 Add `-v` to any command for verbose output, e.g. `python staples.py watch -v`.
 
-Project-specific variables, such as content paths and template directories, are specified in a `settings.py` placed in the project root. This file also maps files and extensions to specific processors. Without `settings.py`, Staples simply copies files from `content` to `deploy`.
+Project-specific variables, such as content paths and template directories, are specified in a `settings.py` placed in the project root. This file also maps files and extensions to specific processors. Without `settings.py`, Staples simply copies files from `content` to `deploy`. (This is useful for working on something that needs a server, but no templating or other special processing.)
 
 
 ### Build
