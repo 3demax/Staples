@@ -20,6 +20,7 @@ There are no dependencies, beyond the Python Standard Library. However, individu
 ## Usage
 
 Commands:
+
 * `python staples.py build`: build the project
 * `python staples.py watch`: build, then watch the content directory for changes and process changed files
 * `python staples.py runserver [port]`: run the dev server, with optional port
