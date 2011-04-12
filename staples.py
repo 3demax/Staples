@@ -340,11 +340,15 @@ class HandleRequests(BaseHTTPRequestHandler):
     """
     def do_GET(self):
         try:
+            self.path = self.path.split('?')[0]
             path_append = ''
             if len(self.path) > 0 and self.path[-1] == '/':
                 self.path = self.path + INDEX_FILE
             file_path = DEPLOY_DIR + self.path + path_append
-            mtype = mimetypes.guess_type(file_path)[0]
+            if len(self.path) - self.path.rfind('.manifest') == 9:
+                mtype= 'text/cache-manifest'
+            else:
+                mtype = mimetypes.guess_type(file_path)[0]
             f = open(file_path)
             self.send_response(200)
             self.send_header('Content-type', mtype)
@@ -495,7 +499,7 @@ if __name__ == "__main__":
             port = int(sys.argv[2])
         except:
             pass
-        thread.start_new_thread(watch, ())
+        # thread.start_new_thread(watch, ())
         autoreload_main(runserver, (port,))
 
     elif 'build' in sys.argv:
