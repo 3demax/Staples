@@ -35,7 +35,6 @@ PROCESSORS = {}
 sys.path.append(PROJECT_ROOT)
 try:
     import settings
-    from settings import *
 except ImportError:
     if __name__ == "__main__":
         print 'No settings.py found, using defaults.\n'
@@ -45,11 +44,16 @@ else:
 
 verbose=False
 
+
+
 class File(object):
     """
     An object that describes a file to be operated on, with some attributes
     that help manipulate the paths and names.
     """
+    
+    PROCESSORS = settings.PROCESSORS
+    
     def __init__(self, file_path, parent_ignored=False, **kwargs):
         self.source = file_path
         self.rel_path = file_path.replace(CONTENT_DIR,'').lstrip('/')
@@ -80,10 +84,10 @@ class File(object):
         return p(self, **kwargs)
 
     @property
-    def deploy_path(self): return os.path.join(DEPLOY_DIR, self.rel_path)
+    def deploy_path(self): return os.path.join(settings.DEPLOY_DIR, self.rel_path)
 
     @property
-    def remote_path(self): return os.path.join(REMOTE_ROOT, self.rel_path)
+    def remote_path(self): return os.path.join(settings.REMOTE_ROOT, self.rel_path)
 
     @property
     def mtime(self): return os.path.getmtime(self.source)
@@ -96,22 +100,24 @@ class File(object):
         return ( self.name.startswith(".") or self.name.startswith("_")
                 or self.name.endswith("~") or self.name in IGNORE )
 
+
+
 # BUILD FUNCTIONS
 ###############################################################################
 def build(**kwargs):
     print 'Starting build...\n'
     if verbose:
         print 'Removing any existing deploy directory'
-    shutil.rmtree(DEPLOY_DIR, ignore_errors=True)
+    shutil.rmtree(settings.DEPLOY_DIR, ignore_errors=True)
 
     if verbose:
-        print 'Creating deploy directory: ', DEPLOY_DIR
-    os.mkdir(DEPLOY_DIR)
+        print 'Creating deploy directory: ', settings.DEPLOY_DIR
+    os.mkdir(settings.DEPLOY_DIR)
 
     if verbose:
-        print 'Traversing content directory: %s...' % CONTENT_DIR
+        print 'Traversing content directory: %s...' % settings.CONTENT_DIR
 
-    build_directories(CONTENT_DIR, **kwargs)
+    build_directories(settings.CONTENT_DIR, **kwargs)
 
     print '\nBuild done'
 
@@ -122,6 +128,7 @@ def build_directories(t_path, **kwargs):
     """
     for file in glob.glob( os.path.join(t_path, '*') ):
         File(file, **kwargs).process(**kwargs)
+
 
 # HELPER FUNCTIONS
 
@@ -205,7 +212,6 @@ def handle_django(f, for_deployment=False, **kwargs):
     elif verbose:
         print "Ignoring:", f.rel_path
 
-
 def handle_markdown(f, **kwargs):
     """
     A markdown processor. Requires the `markdown` module. It allows for
@@ -282,9 +288,9 @@ def watch():
     Initiates a full rebuild of the project, then watches for changed files.
     Once a second, it polls all of the files in the content directory.
     """
-    watcher = DirWatcher(CONTENT_DIR)
+    watcher = DirWatcher(settings.CONTENT_DIR)
     build()
-    print 'Watching %s...' % CONTENT_DIR
+    print 'Watching %s...' % settings.CONTENT_DIR
     while True:
         time.sleep(1)
         changed = watcher.find_changed_files()
@@ -327,6 +333,7 @@ class DirWatcher(object):
                     self.changed_files.append(f)
 
 
+
 # DEVELOPMENT SERVER
 ###############################################################################
 
@@ -337,155 +344,53 @@ class HandleRequests(BaseHTTPRequestHandler):
     """
     A stupid-simple webserver that serves up static files, and nothing else.
     Requests for a directory will return the contents of the INDEX_FILE.
+    Any query parameters are simply stripped from the request path. Only GET
+    is supported.
     """
     def do_GET(self):
         try:
+            # Ignore any query params (eg as used by livereload)
             self.path = self.path.split('?')[0]
-            path_append = ''
+            
             if len(self.path) > 0 and self.path[-1] == '/':
                 self.path = self.path + INDEX_FILE
-            file_path = DEPLOY_DIR + self.path + path_append
+            file_path = settings.DEPLOY_DIR + self.path
+            
+            # Set the mimetype appropriately. This test is needed to support
+            # the text/cache-manifest type used by appcache manifest files.
             if len(self.path) - self.path.rfind('.manifest') == 9:
                 mtype= 'text/cache-manifest'
             else:
                 mtype = mimetypes.guess_type(file_path)[0]
+            
             f = open(file_path)
             self.send_response(200)
             self.send_header('Content-type', mtype)
             self.end_headers()
             self.wfile.write(f.read())
             f.close()
-            return
 
         except IOError:
             self.send_error(404,'File Not Found: %s' % self.path)
 
+        return
+
 def runserver(port=8000):
     """
-    Runs the web server at localhost and the specified port (default port 8000).
+    Runs the web server at the specified port (default port 8000).
     """
     try:
         server = HTTPServer(('', port), HandleRequests)
-        print 'Running server at localhost:%s...' % port
+        print 'Running server on :%s...' % port
         server.serve_forever()
     except KeyboardInterrupt:
         print 'Shutting down server'
         server.socket.close()
 
 
+
 # CONTROL
 ###############################################################################
-
-# START Autoreloading launcher.
-# Borrowed from Peter Hunt and the CherryPy project (http://www.cherrypy.org).
-# Some taken from Ian Bicking's Paste (http://pythonpaste.org/).
-#
-# Portions copyright (c) 2004, CherryPy Team (team@cherrypy.org)
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-#
-#     * Redistributions of source code must retain the above copyright notice,
-#       this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above copyright notice,
-#       this list of conditions and the following disclaimer in the documentation
-#       and/or other materials provided with the distribution.
-#     * Neither the name of the CherryPy Team nor the names of its contributors
-#       may be used to endorse or promote products derived from this software
-#       without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-import os, sys, time
-
-try:
-    import thread
-except ImportError:
-    import dummy_thread as thread
-
-RUN_RELOADER = True
-
-_mtimes = {}
-_win = (sys.platform == "win32")
-
-def code_changed():
-    global _mtimes, _win
-    for filename in filter(lambda v: v, map(lambda m: getattr(m, "__file__", None), sys.modules.values())):
-        if filename.endswith(".pyc") or filename.endswith(".pyo"):
-            filename = filename[:-1]
-        if not os.path.exists(filename):
-            continue # File might be in an egg, so it can't be reloaded.
-        stat = os.stat(filename)
-        mtime = stat.st_mtime
-        if _win:
-            mtime -= stat.st_ctime
-        if filename not in _mtimes:
-            _mtimes[filename] = mtime
-            continue
-        if mtime != _mtimes[filename]:
-            _mtimes = {}
-            return True
-    return False
-
-def reloader_thread():
-    while RUN_RELOADER:
-        if code_changed():
-            sys.exit(3) # force reload
-        time.sleep(1)
-
-def restart_with_reloader():
-    while True:
-        args = [sys.executable] + sys.argv
-        if sys.platform == "win32":
-            args = ['"%s"' % arg for arg in args]
-        new_environ = os.environ.copy()
-        new_environ["RUN_MAIN"] = 'true'
-        exit_code = os.spawnve(os.P_WAIT, sys.executable, args, new_environ)
-        if exit_code != 3:
-            return exit_code
-
-def python_reloader(main_func, args, kwargs):
-    if os.environ.get("RUN_MAIN") == "true":
-        thread.start_new_thread(main_func, args, kwargs)
-        try:
-            reloader_thread()
-        except KeyboardInterrupt:
-            pass
-    else:
-        try:
-            sys.exit(restart_with_reloader())
-        except KeyboardInterrupt:
-            pass
-
-def jython_reloader(main_func, args, kwargs):
-    from _systemrestart import SystemRestart
-    thread.start_new_thread(main_func, args)
-    while True:
-        if code_changed():
-            raise SystemRestart
-        time.sleep(1)
-
-def autoreload_main(main_func, args=None, kwargs=None):
-    if args is None:
-        args = ()
-    if kwargs is None:
-        kwargs = {}
-    if sys.platform.startswith('java'):
-        reloader = jython_reloader
-    else:
-        reloader = python_reloader
-    reloader(main_func, args, kwargs)
-# END Autoreload launcher.
 
 if __name__ == "__main__":
     if '-v' in sys.argv:
@@ -499,8 +404,7 @@ if __name__ == "__main__":
             port = int(sys.argv[2])
         except:
             pass
-        # thread.start_new_thread(watch, ())
-        autoreload_main(runserver, (port,))
+        runserver(port=port)
 
     elif 'build' in sys.argv:
         if '-d' in sys.argv:
@@ -515,7 +419,7 @@ if __name__ == "__main__":
     Staples Usage:
         build     - `python staples.py build`
         watch     - `python staples.py watch`
-        runserver - `python staples.py runserver [port]`'
+        runserver - `python staples.py runserver [port]`
 
     Add '-v' to any command for verbose output.
     e.g. `python staples.py build verbose`
