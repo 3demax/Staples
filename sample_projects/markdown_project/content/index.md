@@ -5,8 +5,6 @@
 }
 /INFO
 
-[About](/about.html) [Contact](/contact.html)
-
 Sample Markdown Project
 =======================
 

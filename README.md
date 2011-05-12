@@ -37,7 +37,7 @@ Everything goes into `content/` and comes out in `deploy/`, or whatever you set 
 Files and folders will be processed according to the specified settings. The processors are mapped to extensions or filenames using a dictionary in `settings.py`. Here, the extension `.ext` is mapped to the processor function `handle_ext`.
 
     PROCESSORS = {
-        '.ext': handle_ext,
+        '.ext': 'handle_ext',
     }
 
 Anything not mapped to a processor will be simply copied over, unless it is ignorable. Files and directories starting with `_` will not be copied (but will be processed). e.g. If your sass source directory is `_sass`, the sass files will not be copied, but the sass processor can still compile them into CSS. You can also explicitly ignore any file or folder using the IGNORE setting.
@@ -73,7 +73,7 @@ See [Processors](https://github.com/typeish/staples/wiki/Processors) for more in
 To use the included Django processor, `handle_django`, map the processor to the extension of your templates:
 
     PROCESSORS = {
-        '.django': handle_django,
+        '.django': 'handle_django',
         ...
     }
 
@@ -84,7 +84,7 @@ If you include the `.django` extension in your Django templates, it will get rem
 To use the included markdown processor, `handle_markdown`, map the processor to the extension of your source files:
 
     PROCESSORS = {
-        '.md': handle_markdown,
+        '.md': 'handle_markdown',
         ...
     }
 

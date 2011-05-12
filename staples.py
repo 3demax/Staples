@@ -18,29 +18,36 @@ import os, shutil, commands, glob, sys
 
 # Look for a settings.py in the current working directory
 sys.path.append(os.getcwd())
+
+class Settings(object):
+    """
+    Settings class, preloaded with defaults.
+    """
+    # Default settings
+    PROJECT_ROOT = os.getcwd()
+    CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
+    DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
+
+    REMOTE_ROOT = ''
+
+    INDEX_FILE = 'index.html'
+    IGNORE = ()
+    PROCESSORS = {}
+
+settings = Settings()
+
+
+
 try:
-    import settings
+    import settings as ext_settings
 except ImportError:
     if __name__ == "__main__":
         print 'No settings.py found, using defaults.\n'
-
-        class Settings(object):
-            # Default settings
-            PROJECT_ROOT = os.getcwd()
-            CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
-            DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
-    
-            REMOTE_ROOT = ''
-    
-            INDEX_FILE = 'index.html'
-            IGNORE = ()
-            PROCESSORS = {}
-        
-        settings = Settings()
 else:
     if __name__ == "__main__":
-        print 'Using settings file %s' % settings.__file__[:-1]
-
+        print 'Using settings file %s' % ext_settings.__file__
+        for attr, val in ext_settings.__dict__.items():
+            setattr(settings,attr,val)
 verbose=False
 
 
@@ -50,12 +57,10 @@ class File(object):
     An object that describes a file to be operated on, with some attributes
     that help manipulate the paths and names.
     """
-    
-    PROCESSORS = settings.PROCESSORS
-    
+
     def __init__(self, file_path, parent_ignored=False, **kwargs):
         self.source = file_path
-        self.rel_path = file_path.replace(CONTENT_DIR,'').lstrip('/')
+        self.rel_path = file_path.replace(settings.CONTENT_DIR,'').lstrip('/')
         self.rel_parent, self.name = os.path.split(self.source)
         self.ext = os.path.splitext(self.name)[1]
         self.parent_ignored = parent_ignored
@@ -64,6 +69,9 @@ class File(object):
         """
         Identifies the appropriate processor for the file and calls it.
         """
+
+        PROCESSORS = settings.PROCESSORS
+        verbose = True
         if verbose:
             print 'Processing:', self.rel_path
         if self.name in PROCESSORS:
@@ -72,15 +80,26 @@ class File(object):
             if '/' in PROCESSORS:
                 p = PROCESSORS['/']
             else:
-                p = handle_directory
+                p = 'handle_directory'
 
         elif self.ext in PROCESSORS:
             p = PROCESSORS[self.ext]
         elif '*' in PROCESSORS:
             p = PROCESSORS['*']
         else:
-            p = handle_others
-        return p(self, **kwargs)
+            p = 'handle_others'
+        
+        global_vars = globals()
+        if p in global_vars:
+            handler_func = global_vars[p]
+        else:
+            handler_func = __import__(p)
+        
+        print p
+        print p in global_vars
+        
+        return handler_func(self, **kwargs)
+        
 
     @property
     def deploy_path(self): return os.path.join(settings.DEPLOY_DIR, self.rel_path)
@@ -234,18 +253,9 @@ def handle_markdown(f, **kwargs):
                 pass
 
         try:
-            from settings import MD_PRE
-        except ImportError:
-            pre = ''
-        else:
-            pre = MD_PRE
-
-        try:
-            from settings import MD_POST
-        except ImportError:
-            post = ''
-        else:
-            post = MD_POST
+            wrap = settings.MD_WRAP
+        except:
+            wrap = ''
 
         info = {}
         if json:
@@ -270,9 +280,9 @@ def handle_markdown(f, **kwargs):
                     tag = '<meta type="%s" content="' % k.split('-')[1]
                 else:
                     tag = '<%s>' % k
-                pre = pre.replace(tag, tag + info[k])
+                wrap = wrap.replace(tag, tag + info[k])
 
-        fout.write(pre + rendered + post)
+        fout.write( wrap.replace('{{ CONTENT }}', rendered) )
         fout.close()
 
 
@@ -346,6 +356,7 @@ class HandleRequests(BaseHTTPRequestHandler):
     Any query parameters are simply stripped from the request path. Only GET
     is supported.
     """
+    
     def do_GET(self):
         try:
             # Ignore any query params (eg as used by livereload)

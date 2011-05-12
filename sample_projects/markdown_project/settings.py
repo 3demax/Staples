@@ -12,17 +12,14 @@ IGNORE = (
 )
 
 
-# import the included Markdown processor from staples
-from staples import handle_markdown
-
 PROCESSORS = {
     # Add handlers for different filetypes here.
     # e.g. template renderers, CSS compressors, JS compilers, etc...
-    # '.ext': handler,
-    '.md': handle_markdown,
+    # '.ext': 'handler',
+    '.md': 'handle_markdown',
 }
 
-MD_PRE = """<!DOCTYPE html>
+MD_WRAP = """<!DOCTYPE html>
 <html>
 <head>
     <title> - Sample Markdown Project</title>
@@ -30,9 +27,8 @@ MD_PRE = """<!DOCTYPE html>
     <link rel="stylesheet" href="/css/style.css" type="text/css" media="screen" />
 </head>
 <body>
-"""
-
-MD_POST = """
+    <nav><a href="/">Home</a> <a href="/about.html">About</a> <a href="/contact.html">Contact</a></nav>
+{{ CONTENT }}
 </body>
 </html>
 """

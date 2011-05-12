@@ -5,9 +5,7 @@
 }
 /INFO
 
-[Home](/)
-
 About Sample Markdown Project
 =============================
 
-Here is some text describing the project.
+Here is some text describing the project. Go [back](/)
