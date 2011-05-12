@@ -374,13 +374,15 @@ class HandleRequests(BaseHTTPRequestHandler):
 
         return
 
-def runserver(port=8000):
+def runserver(port=8000, in_cwd=False):
     """
     Runs the web server at the specified port (default port 8000).
     """
+    if in_cwd:
+        settings.DEPLOY_DIR = os.getcwd()
     try:
         server = HTTPServer(('', port), HandleRequests)
-        print 'Running server on :%s...' % port
+        print 'Running server on :%s...\n^C to quit' % port
         server.serve_forever()
     except KeyboardInterrupt:
         print 'Shutting down server'
@@ -403,7 +405,7 @@ if __name__ == "__main__":
             port = int(sys.argv[2])
         except:
             pass
-        runserver(port=port)
+        runserver(port=port, in_cwd=('-h' in sys.argv) )
 
     elif 'build' in sys.argv:
         if '-d' in sys.argv:
@@ -416,13 +418,17 @@ if __name__ == "__main__":
     else:
         print """
     Staples Usage:
-        build     - `python staples.py build`
+        build     - `python staples.py build [-d]`
         watch     - `python staples.py watch`
-        runserver - `python staples.py runserver [port]`
+        runserver - `python staples.py runserver [port] [-h]`
 
     Add '-v' to any command for verbose output.
-    e.g. `python staples.py build verbose`
+        e.g. `python staples.py build verbose`
 
     Add '-d' to `build` for building with for_deployment set to True.
-    e.g. `python staples.py build -d`
+        e.g. `python staples.py build -d`
+    
+    Add '-h' to `runserver` (after the port if any) to override the
+    DEPLOY_DIR with the current working directory.
+        e.g. `python staples.py runserver 8000 -h`
     """
