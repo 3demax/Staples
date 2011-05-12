@@ -8,36 +8,35 @@ has no external requirements itself, beyond the Python Standard Library.
 Specific processors, such as the included Django template renderer, will
 have their own requirements.
 
-Info and source: http://github.com/typeish/staples
+Info and source: https://github.com/typeish/staples
 
 type(ish), inc.
 License: UNLICENSE
 """
 
-__author__ = 'type(ish) inc'
-__version__ = '0.1a'
-__license__ = 'UNLICENSE'
-
 import os, shutil, commands, glob, sys
 
-# Default settings
-PROJECT_ROOT = os.getcwd()
-CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
-DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
-
-REMOTE_ROOT = ''
-
-INDEX_FILE = 'index.html'
-IGNORE = ()
-PROCESSORS = {}
-
 # Look for a settings.py in the current working directory
-sys.path.append(PROJECT_ROOT)
+sys.path.append(os.getcwd())
 try:
     import settings
 except ImportError:
     if __name__ == "__main__":
         print 'No settings.py found, using defaults.\n'
+
+        class Settings(object):
+            # Default settings
+            PROJECT_ROOT = os.getcwd()
+            CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
+            DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
+    
+            REMOTE_ROOT = ''
+    
+            INDEX_FILE = 'index.html'
+            IGNORE = ()
+            PROCESSORS = {}
+        
+        settings = Settings()
 else:
     if __name__ == "__main__":
         print 'Using settings file %s' % settings.__file__[:-1]
@@ -98,7 +97,7 @@ class File(object):
     @property
     def ignorable(self):
         return ( self.name.startswith(".") or self.name.startswith("_")
-                or self.name.endswith("~") or self.name in IGNORE )
+                or self.name.endswith("~") or self.name in settings.IGNORE )
 
 
 
@@ -353,7 +352,7 @@ class HandleRequests(BaseHTTPRequestHandler):
             self.path = self.path.split('?')[0]
             
             if len(self.path) > 0 and self.path[-1] == '/':
-                self.path = self.path + INDEX_FILE
+                self.path = self.path + settings.INDEX_FILE
             file_path = settings.DEPLOY_DIR + self.path
             
             # Set the mimetype appropriately. This test is needed to support
