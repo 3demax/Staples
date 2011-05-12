@@ -23,7 +23,7 @@ Commands:
 
 * `python staples.py build`: build the project
 * `python staples.py watch`: build, then watch the content directory for changes and process changed files
-* `python staples.py runserver [port]`: run the dev server, with optional port
+* `python staples.py runserver [port] [--cwd]`: run the dev server, with optional port
 
 Add `-v` to any command for verbose output, e.g. `python staples.py watch -v`.
 
@@ -56,8 +56,9 @@ Note: `watch` does not (yet) remove files or folders from the deploy directory t
 
 ### Runserver
 
-There is also a simple development server included. It just handles requests for static files to `localhost:8000` from the deploy directory. By default, the port is `8000`, though you can specify the port you want to use by adding it after runserver: `python staples.py runserver 8080` runs it at `localhost:8080`. Requests for directories will return back the specified INDEX_FILE (default is `index.html`) in that directory.
+There is also a simple development server included. It just handles requests for static files to `localhost:8000` from the deploy directory. By default, the port is `8000`, though you can specify the port you want to use by adding it after runserver: `python staples.py runserver 8080` runs it at `0.0.0.0:8080`. Requests for directories will return back the specified INDEX_FILE (default is `index.html`) in that directory.
 
+Adding '--cwd' after the port, if any, will override the DEPLOY_DIR as the root for the server, using the current working directory. This is useful if you need to serve a static site that doesn't need compiling, or any specified settings.
 
 
 ## Processors
@@ -76,7 +77,7 @@ To use the included Django processor, `handle_django`, map the processor to the 
         ...
     }
 
-If you include the `.django` extension in your Django templates, it will get removed, so the secondary extension should be the desired extension of the output. e.g. `index.html.django` or `index.django.html` become `index.html` and `sitemap.xml.django` or `sitemap.django.xml` become `sitemap.xml`
+If you include the `.django` extension in your Django templates, it will get removed, so the secondary extension should be the desired extension of the output. e.g. `index.html.django` or `index.django.html` become `index.html` and `sitemap.xml.django` or `sitemap.django.xml` become `sitemap.xml`.
 
 
 ### Markdown Processor

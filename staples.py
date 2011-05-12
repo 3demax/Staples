@@ -405,7 +405,7 @@ if __name__ == "__main__":
             port = int(sys.argv[2])
         except:
             pass
-        runserver(port=port, in_cwd=('-h' in sys.argv) )
+        runserver(port=port, in_cwd=('--cwd' in sys.argv) )
 
     elif 'build' in sys.argv:
         if '-d' in sys.argv:
@@ -420,7 +420,7 @@ if __name__ == "__main__":
     Staples Usage:
         build     - `python staples.py build [-d]`
         watch     - `python staples.py watch`
-        runserver - `python staples.py runserver [port] [-h]`
+        runserver - `python staples.py runserver [port] [--cwd]`
 
     Add '-v' to any command for verbose output.
         e.g. `python staples.py build verbose`
@@ -428,7 +428,7 @@ if __name__ == "__main__":
     Add '-d' to `build` for building with for_deployment set to True.
         e.g. `python staples.py build -d`
     
-    Add '-h' to `runserver` (after the port if any) to override the
+    Add '--cwd' to `runserver` (after the port if any) to override the
     DEPLOY_DIR with the current working directory.
-        e.g. `python staples.py runserver 8000 -h`
+        e.g. `python staples.py runserver 8000 --cwd`
     """
