@@ -2,7 +2,6 @@ import os
 
 PROJECT_ROOT = os.getcwd()
 
-# Django needs absolute paths for template rendering
 CONTENT_DIR = os.path.join(PROJECT_ROOT,'content')
 DEPLOY_DIR = os.path.join(PROJECT_ROOT,'deploy')
 
@@ -19,6 +18,9 @@ PROCESSORS = {
     '.md': 'handle_markdown',
 }
 
+# The Markdown content will be inserted into this markup at the point marked by
+# `{{ CONTENT }}`. Another option is to put this markup into a file, and load
+# it in like so: `MD_WRAP = open('wrap.file').read()`
 MD_WRAP = """<!DOCTYPE html>
 <html>
 <head>
