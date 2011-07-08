@@ -11,8 +11,14 @@ have their own requirements.
 Info and source: https://github.com/typeish/staples
 
 type(ish), inc.
+Version: 0.1.0
 License: UNLICENSE
 """
+
+__author__      = 'type(ish), inc. <http://typeish.net>'
+__version__     = '0.1.0'
+__license__     = 'UNLICENSE'
+
 
 import commands, datetime, glob, os, shutil, sys, thread
 
@@ -57,13 +63,11 @@ settings = Settings()
 try:
     import settings as ext_settings
 except ImportError:
-    if __name__ == "__main__":
-        stamp('No settings.py found, using defaults.\n', color=CWARNING)
+    stamp('No settings.py found, using defaults.\n', color=CWARNING)
 else:
-    if __name__ == "__main__":
-        stamp('Using settings file %s' % ext_settings.__file__, color=COKGREEN)
-        for attr, val in ext_settings.__dict__.items():
-            setattr(settings,attr,val)
+    stamp('Using settings file %s' % ext_settings.__file__, color=COKGREEN)
+    for attr, val in ext_settings.__dict__.items():
+        setattr(settings,attr,val)
 
 
 
@@ -410,7 +414,7 @@ def runserver(port=8000, in_cwd=False, and_watch=False):
 # CONTROL
 ###############################################################################
 
-if __name__ == '__main__':
+def main():
     if 'runserver' in sys.argv:
         port = 8000
         try:
@@ -432,18 +436,21 @@ if __name__ == '__main__':
     else:
         print """
     Staples Usage:
-        build     - `python staples.py build`
-        watch     - `python staples.py watch`
-        runserver - `python staples.py runserver [PORT] [watch] [--cwd]`
+        build     - `staples build`
+        watch     - `staples watch`
+        runserver - `staples runserver [PORT] [watch] [--cwd]`
 
     Add '-d' to `build` for building with for_deployment set to True.
-        e.g. `python staples.py build -d`
+        e.g. `staples build -d`
     
     Add 'watch' to 'runserver' (after the port if any) to also run the build
     and watch routines.
-        e.g. `python staples.py runserver 8000 watch`
+        e.g. `staples runserver 8000 watch`
 
     Add '--cwd' to `runserver` (after the port if any) to override the
     DEPLOY_DIR with the current working directory.
-        e.g. `python staples.py runserver 8000 --cwd`
+        e.g. `staples runserver 8000 --cwd`
     """
+
+if __name__ == '__main__':
+    main()

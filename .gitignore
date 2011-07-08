@@ -12,6 +12,7 @@ syntax: glob
 *.pyc
 *.swp
 *~
+.livereload
 
 # Mac stuff
 .DS_Store

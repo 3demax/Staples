@@ -11,7 +11,9 @@ Loosely based on [aym-cms](https://github.com/lethain/aym-cms), and influenced b
 
 ## Installation
 
-The core is entirely contained within the file `staples.py`. The simplest usage is to just include `staples.py` in the project folder. However, Staples operates based on the current working directory, so the `staples.py` file itself can go anywhere that you can run it. It can even be added to your PATH and given executable permissions, turning it into a command. You can also rename it or use an alias to make the command simply `staples`.
+`python setup.py install` will install Staples as a command `staples`.
+
+Alternatively, the core is entirely contained within the file `staples.py`, so that file can just be included in the project folder and execute it using `python staples.py`. However, Staples operates based on the current working directory, so the `staples.py` file itself can go anywhere that you can run it.
 
 There are no dependencies, beyond the Python Standard Library. However, individual processors will likely have specific dependencies. For example, to use the included Django processor, your environment must have Django.
 
@@ -21,11 +23,9 @@ There are no dependencies, beyond the Python Standard Library. However, individu
 
 Commands:
 
-* `python staples.py build`: build the project
-* `python staples.py watch`: build, then watch the content directory for changes and process changed files
-* `python staples.py runserver [port] [--cwd]`: run the dev server, with optional port
-
-Add `-v` to any command for verbose output, e.g. `python staples.py watch -v`.
+* `staples build`: build the project
+* `staples watch`: build, then watch the content directory for changes and process changed files
+* `staples runserver [PORT] [watch] [--cwd]`: run the dev server, with optional port and file building
 
 Project-specific variables, such as content paths and template directories, are specified in a `settings.py` placed in the project root. This file also maps files and extensions to specific processors. Without `settings.py`, Staples simply copies files from `content` to `deploy`. (This is useful for working on something that needs a server, but no templating or other special processing.)
 
@@ -57,6 +57,8 @@ Note: `watch` does not (yet) remove files or folders from the deploy directory t
 ### Runserver
 
 There is also a simple development server included. It just handles requests for static files to `localhost:8000` from the deploy directory. By default, the port is `8000`, though you can specify the port you want to use by adding it after runserver: `python staples.py runserver 8080` runs it at `0.0.0.0:8080`. Requests for directories will return back the specified INDEX_FILE (default is `index.html`) in that directory.
+
+Adding 'watch' after the port, if any, will also initiate a build and watch routine, building changed files.
 
 Adding '--cwd' after the port, if any, will override the DEPLOY_DIR as the root for the server, using the current working directory. This is useful if you need to serve a static site that doesn't need compiling, or any specified settings.
 
