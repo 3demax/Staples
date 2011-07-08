@@ -334,7 +334,6 @@ class DirWatcher(object):
         for file in glob.glob( os.path.join(current_file, '*') ):
             f = File(file)
             if f.is_directory:
-                f.process()
                 self.update_mtimes(f.source)
             else:
                 mtime = f.mtime
