@@ -69,7 +69,7 @@ There are two default processors, one for files and one for directories. They si
 
 You can override the default processors by mapping the desired handlers to '/' for directories and '*' for files.
 
-See [Processors](https://github.com/typeish/staples/wiki/Processors) for more information on using and making processors.
+See [Processors](https://github.com/typeish/staples/wiki/) for more information on using and making processors.
 
 ### Django Processor
 To use the included Django processor, `handle_django`, map the processor to the extension of your templates:

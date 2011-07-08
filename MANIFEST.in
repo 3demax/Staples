@@ -1,0 +1,3 @@
+include UNLICENSE
+include README.md
+include staples.py
