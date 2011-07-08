@@ -15,23 +15,23 @@ Info and source: https://github.com/typeish/staples
 """
 
 setup(
-    name				= 'Staples',
-    version				= staples.__version__,
-    long_description	= '',
-    long_description	= long_description,
-    author				= staples.__author__,
-    author_email		= 'contact@typeish.net',
-    url					= 'https://github.com/typeish/staples',
-    py_modules			= ['staples'],
-    test_suite			= '',
-    tests_require		= [],
-    install_requires	= [],
-    license				= staples.__license__
-    entry_points		= {
+    name                = 'Staples',
+    version             = staples.__version__,
+    long_description    = '',
+    long_description    = long_description,
+    author              = staples.__author__,
+    author_email        = 'contact@typeish.net',
+    url                 = 'https://github.com/typeish/staples',
+    py_modules          = ['staples'],
+    test_suite          = '',
+    tests_require       = [],
+    install_requires    = [],
+    license             = staples.__license__
+    entry_points        = {
         'console_scripts': [
             'staples = staples:main',
         ]
     },
-    classifiers			=[
+    classifiers         =[
     ],
 )
