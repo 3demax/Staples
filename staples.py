@@ -14,7 +14,22 @@ type(ish), inc.
 License: UNLICENSE
 """
 
-import commands, glob, os, shutil, sys, thread
+import commands, datetime, glob, os, shutil, sys, thread
+
+
+
+# Some colors for friendlier output
+# see: http://stackoverflow.com/questions/287871/print-in-terminal-with-colors-using-python
+CHEADER     = '\033[95m' # purple
+COKBLUE     = '\033[94m' # blue
+COKGREEN    = '\033[92m' # green
+CWARNING    = '\033[93m' # yellow
+CFAIL       = '\033[91m' # red
+CEND        = '\033[0m'
+
+def stamp(message, color=CEND):
+    now = datetime.datetime.now().strftime('%H:%M:%S')
+    print '%s%s: %s%s' % (color, now, message, CEND)
 
 # Look for a settings.py in the current working directory
 sys.path.append(os.getcwd())
@@ -24,16 +39,16 @@ class Settings(object):
     Settings class, preloaded with defaults.
     """
     # Default settings
-    PROJECT_ROOT = os.getcwd()
-    CONTENT_DIR = os.path.join(PROJECT_ROOT, 'content')
-    DEPLOY_DIR = os.path.join(PROJECT_ROOT, 'deploy')
+    PROJECT_ROOT    = os.getcwd()
+    CONTENT_DIR     = os.path.join(PROJECT_ROOT, 'content')
+    DEPLOY_DIR      = os.path.join(PROJECT_ROOT, 'deploy')
 
-    REMOTE_ROOT = ''
+    REMOTE_ROOT     = ''
 
-    INDEX_FILE = 'index.html'
-    IGNORE = ()
-    PROCESSORS = {}
-    WATCH_INTERVAL = 1  # seconds
+    INDEX_FILE      = 'index.html'
+    IGNORE          = ()
+    PROCESSORS      = {}
+    WATCH_INTERVAL  = 1  # seconds
 
 settings = Settings()
 
@@ -43,13 +58,12 @@ try:
     import settings as ext_settings
 except ImportError:
     if __name__ == "__main__":
-        print 'No settings.py found, using defaults.\n'
+        stamp('No settings.py found, using defaults.\n', color=CWARNING)
 else:
     if __name__ == "__main__":
-        print 'Using settings file %s' % ext_settings.__file__
+        stamp('Using settings file %s' % ext_settings.__file__, color=COKGREEN)
         for attr, val in ext_settings.__dict__.items():
             setattr(settings,attr,val)
-verbose=False
 
 
 
@@ -69,36 +83,33 @@ class File(object):
     def process(self, **kwargs):
         """
         Identifies the appropriate processor for the file and calls it.
+        settings.PROCESSORS must be a dictionary mapping file name patters, as
+        strings, with processor function names, also strings. The processor must
+        be importable if it's not one of the included functions.
         """
+        procs = settings.PROCESSORS
 
-        PROCESSORS = settings.PROCESSORS
-        verbose = True
-        if verbose:
-            print 'Processing:', self.rel_path
-        if self.name in PROCESSORS:
-            p = PROCESSORS[self.name]
+        if self.name in procs:
+            proc = procs[self.name]
         elif self.is_directory:
-            if '/' in PROCESSORS:
-                p = PROCESSORS['/']
+            if '/' in procs:
+                proc = procs['/']
             else:
-                p = 'handle_directory'
+                proc = 'handle_directory'
 
-        elif self.ext in PROCESSORS:
-            p = PROCESSORS[self.ext]
-        elif '*' in PROCESSORS:
-            p = PROCESSORS['*']
+        elif self.ext in procs:
+            proc = procs[self.ext]
+        elif '*' in procs:
+            proc = procs['*']
         else:
-            p = 'handle_others'
+            proc = 'handle_others'
         
         global_vars = globals()
-        if p in global_vars:
-            handler_func = global_vars[p]
+        if proc in global_vars:
+            handler_func = global_vars[proc]
         else:
-            handler_func = __import__(p)
-        
-        print p
-        print p in global_vars
-        
+            handler_func = __import__(proc)
+
         return handler_func(self, **kwargs)
         
 
@@ -121,24 +132,23 @@ class File(object):
 
 
 
+
 # BUILD FUNCTIONS
 ###############################################################################
+
 def build(**kwargs):
-    print 'Starting build...\n'
-    if verbose:
-        print 'Removing any existing deploy directory'
+    stamp('Starting build...\n')
+    stamp('Removing any existing deploy directory')
     shutil.rmtree(settings.DEPLOY_DIR, ignore_errors=True)
 
-    if verbose:
-        print 'Creating deploy directory: ', settings.DEPLOY_DIR
+    stamp('Creating deploy directory: ', settings.DEPLOY_DIR)
     os.mkdir(settings.DEPLOY_DIR)
 
-    if verbose:
-        print 'Traversing content directory: %s...' % settings.CONTENT_DIR
+    stamp('Traversing content directory: %s...' % settings.CONTENT_DIR)
 
     build_directories(settings.CONTENT_DIR, **kwargs)
 
-    print '\nBuild done'
+    stamp('Build done', color=COKGREEN)
 
 def build_directories(t_path, **kwargs):
     """
@@ -160,7 +170,7 @@ def strip_extension(filepath, ext):
     dirname = os.path.dirname(filepath)
     basename = os.path.basename(filepath).replace(ext, "")
     if not basename:
-        raise ValueError("Stripping '%s' will cause the file name to be blank." % ext)
+        raise ValueError(CFAIL + "Stripping '%s' will cause the file name to be blank." % ext + CEND)
     return os.path.join(dirname, basename)
 
 
@@ -187,11 +197,7 @@ def handle_others(f, **kwargs):
     Simply copies files from the source path to the deploy path.
     """
     if not f.ignorable and not f.parent_ignored:
-        if verbose:
-            print 'Copying file to:', f.deploy_path
         commands.getoutput(u"cp %s %s" % (f.source, f.deploy_path))
-    elif verbose:
-        print 'Ignoring:', f.rel_path
 
 
 # EXTRA HANDLERS
@@ -206,7 +212,6 @@ def handle_django(f, for_deployment=False, **kwargs):
         settings.py - placed in the same directory and defines both
                       TEMPLATE_DIRS and CONTEXT
     """
-    verbose = globals().get('verbose', False)
     if not f.ignorable and not f.parent_ignored:
         from django.template.loader import render_to_string
         import settings
@@ -214,22 +219,15 @@ def handle_django(f, for_deployment=False, **kwargs):
         os.environ['DJANGO_SETTINGS_MODULE'] = u"settings"
         deploy_path = strip_extension(f.deploy_path, "django")
 
-        if verbose:
-            print "Rendering:", f.rel_path
-
         context = {}
         if settings.CONTEXT:
             context = settings.CONTEXT
         context["for_deployment"] = for_deployment
         rendered = render_to_string(f.source, context)
 
-        if verbose:
-            print "Saving rendered output to:", deploy_path
         fout = open(deploy_path,"w")
         fout.write(rendered)
         fout.close()
-    elif verbose:
-        print "Ignoring:", f.rel_path
 
 def handle_markdown(f, **kwargs):
     """
@@ -363,7 +361,6 @@ class HandleRequests(BaseHTTPRequestHandler):
     Any query parameters are simply stripped from the request path. Only GET
     is supported.
     """
-    
     def do_GET(self):
         try:
             # Ignore any query params (eg as used by livereload)
@@ -402,10 +399,10 @@ def runserver(port=8000, in_cwd=False, and_watch=False):
         spawn_child_watcher()
     try:
         server = HTTPServer(('', port), HandleRequests)
-        print 'Running server on :%s...\n^C to quit' % port
+        stamp('Running server on :%s...\n^C to quit\n\n' % port,color=COKBLUE)
         server.serve_forever()
     except KeyboardInterrupt:
-        print 'Shutting down server'
+        stamp('Shutting down server', color=COKBLUE)
         server.socket.close()
 
 
@@ -413,12 +410,7 @@ def runserver(port=8000, in_cwd=False, and_watch=False):
 # CONTROL
 ###############################################################################
 
-if __name__ == "__main__":
-    if '-v' in sys.argv:
-        verbose = True
-    else:
-        verbose = False
-
+if __name__ == '__main__':
     if 'runserver' in sys.argv:
         port = 8000
         try:
@@ -440,16 +432,17 @@ if __name__ == "__main__":
     else:
         print """
     Staples Usage:
-        build     - `python staples.py build [-d]`
+        build     - `python staples.py build`
         watch     - `python staples.py watch`
-        runserver - `python staples.py runserver [port] [--cwd]`
-
-    Add '-v' to any command for verbose output.
-        e.g. `python staples.py build verbose`
+        runserver - `python staples.py runserver [PORT] [watch] [--cwd]`
 
     Add '-d' to `build` for building with for_deployment set to True.
         e.g. `python staples.py build -d`
     
+    Add 'watch' to 'runserver' (after the port if any) to also run the build
+    and watch routines.
+        e.g. `python staples.py runserver 8000 watch`
+
     Add '--cwd' to `runserver` (after the port if any) to override the
     DEPLOY_DIR with the current working directory.
         e.g. `python staples.py runserver 8000 --cwd`
