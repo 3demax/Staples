@@ -14,7 +14,7 @@ type(ish), inc.
 License: UNLICENSE
 """
 
-import os, shutil, commands, glob, sys
+import commands, glob, os, shutil, sys, thread
 
 # Look for a settings.py in the current working directory
 sys.path.append(os.getcwd())
@@ -341,6 +341,13 @@ class DirWatcher(object):
                     self.file_list[f.source] = mtime
                     self.changed_files.append(f)
 
+def spawn_child_watcher(*args, **kwargs):
+    """
+    Start the watcher in a separate thread. Used by runserver.
+    """
+    thread.start_new_thread(watch, args)
+
+
 
 
 # DEVELOPMENT SERVER
@@ -385,12 +392,14 @@ class HandleRequests(BaseHTTPRequestHandler):
 
         return
 
-def runserver(port=8000, in_cwd=False):
+def runserver(port=8000, in_cwd=False, and_watch=False):
     """
     Runs the web server at the specified port (default port 8000).
     """
     if in_cwd:
         settings.DEPLOY_DIR = os.getcwd()
+    if and_watch:
+        spawn_child_watcher()
     try:
         server = HTTPServer(('', port), HandleRequests)
         print 'Running server on :%s...\n^C to quit' % port
@@ -416,7 +425,9 @@ if __name__ == "__main__":
             port = int(sys.argv[2])
         except:
             pass
-        runserver(port=port, in_cwd=('--cwd' in sys.argv) )
+        in_cwd = '--cwd' in sys.argv
+        and_watch = 'watch' in sys.argv
+        runserver(port=port, in_cwd=in_cwd, and_watch=and_watch)
 
     elif 'build' in sys.argv:
         if '-d' in sys.argv:
