@@ -33,6 +33,7 @@ class Settings(object):
     INDEX_FILE = 'index.html'
     IGNORE = ()
     PROCESSORS = {}
+    WATCH_INTERVAL = 1  # seconds
 
 settings = Settings()
 
@@ -301,7 +302,7 @@ def watch():
     build()
     print 'Watching %s...' % settings.CONTENT_DIR
     while True:
-        time.sleep(1)
+        time.sleep(settings.WATCH_INTERVAL)
         changed = watcher.find_changed_files()
         if len(changed) > 0:
             for f in changed:
