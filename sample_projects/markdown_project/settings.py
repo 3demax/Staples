@@ -29,7 +29,7 @@ MD_WRAP = """<!DOCTYPE html>
     <link rel="stylesheet" href="/css/style.css" type="text/css" media="screen" />
 </head>
 <body>
-    <nav><a href="/">Home</a> <a href="/about.html">About</a> <a href="/contact.html">Contact</a></nav>
+    <nav><a href="index.html">Home</a> <a href="about.html">About</a> <a href="contact.html">Contact</a></nav>
 {{ CONTENT }}
 </body>
 </html>

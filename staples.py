@@ -201,7 +201,8 @@ def handle_others(f, **kwargs):
     Simply copies files from the source path to the deploy path.
     """
     if not f.ignorable and not f.parent_ignored:
-        commands.getoutput(u"cp %s %s" % (f.source, f.deploy_path))
+        print("[processing file] \"%s\" " % (f.source))
+        commands.getoutput("cp \"%s\" \"%s\"" % (f.source, f.deploy_path)) #now supporting non-ascii characters in filepath
 
 
 # EXTRA HANDLERS
@@ -228,9 +229,8 @@ def handle_django(f, for_deployment=False, **kwargs):
             context = settings.CONTEXT
         context["for_deployment"] = for_deployment
         rendered = render_to_string(f.source, context)
-
-        fout = open(deploy_path,"w")
-        fout.write(rendered)
+        fout = open("%s" % deploy_path,"w")
+        fout.write(rendered.encode('utf8')) #now supporting utf8-encoded text
         fout.close()
 
 def handle_markdown(f, **kwargs):
