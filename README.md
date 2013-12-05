@@ -3,7 +3,7 @@
 
 Staples is for static sites, particularly ones where each page has a specific layout. It gives direct control of the structure, while still allowing for the advantages of templating and other automated processing. It follows the old-school model of the URLs being based on the directory structure, with `index.html` files and so on. Basically, Staples just passes everything through, but applies processing to specified files.
 
-See the [included sample projects](https://github.com/typeish/staples/tree/master/sample_projects) for examples.
+See the [included sample projects](https://github.com/3demax/staples/tree/master/sample_projects) for examples.
 
 Loosely based on [aym-cms](https://github.com/lethain/aym-cms), and influenced by [bottle](http://bottle.paws.de) and [Django](http://www.djangoproject.com).
 
@@ -69,7 +69,7 @@ There are two default processors, one for files and one for directories. They si
 
 You can override the default processors by mapping the desired handlers to '/' for directories and '*' for files.
 
-See [Processors](https://github.com/typeish/staples/wiki/) for more information on using and making processors.
+See [Processors](https://github.com/3demax/staples/wiki/) for more information on using and making processors.
 
 ### Django Processor
 To use the included Django processor, `handle_django`, map the processor to the extension of your templates:
@@ -97,7 +97,7 @@ Whichever extension you map the handler to will be replaced by .html in the outp
 
 If you have something that needs to be done to a type of file, you can make a processor for it. Simply create a function that takes in a file and outputs whatever it needs to output, then map it to the extension in `settings.py`.
 
-Processors are given a File object describing the file. See the [Staples source](https://github.com/typeish/staples/blob/master/staples.py) for the attributes available.
+Processors are given a File object describing the file. See the [Staples source](https://github.com/3demax/staples/blob/master/staples.py) for the attributes available.
 
 
 
